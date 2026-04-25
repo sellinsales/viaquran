@@ -26,3 +26,31 @@ CREATE TABLE IF NOT EXISTS reflections (
   INDEX idx_reflections_user_created (user_id, created_at DESC)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS saved_reflections (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  user_id BIGINT UNSIGNED NOT NULL,
+  title VARCHAR(191) NOT NULL,
+  input_text TEXT NOT NULL,
+  theme_id VARCHAR(32) NOT NULL,
+  ayah_reference VARCHAR(32) NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_saved_reflections_user
+    FOREIGN KEY (user_id) REFERENCES app_users(id)
+    ON DELETE CASCADE,
+  INDEX idx_saved_reflections_user_created (user_id, created_at DESC)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS community_posts (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  user_id BIGINT UNSIGNED NOT NULL,
+  author_name VARCHAR(120) NOT NULL,
+  role_label VARCHAR(120) NOT NULL,
+  title VARCHAR(191) NOT NULL,
+  excerpt TEXT NOT NULL,
+  theme_id VARCHAR(32) NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_community_posts_user
+    FOREIGN KEY (user_id) REFERENCES app_users(id)
+    ON DELETE CASCADE,
+  INDEX idx_community_posts_created (created_at DESC)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

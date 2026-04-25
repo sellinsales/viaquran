@@ -5,7 +5,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "ViaQuran",
   description:
-    "A mobile-first Quran reflection app that turns daily emotions and life moments into ayah-based guidance and action.",
+    "A Quran-centered platform for reflection, learning paths, teaching circles, and community sharing.",
 };
 
 export default function RootLayout({

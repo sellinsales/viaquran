@@ -39,6 +39,61 @@ export interface ReflectionEntry {
   xpGained: number;
 }
 
+export interface SavedReflection {
+  id: string;
+  title: string;
+  input: string;
+  themeId: ThemeId;
+  ayahReference: string;
+  createdAt: string;
+}
+
+export interface CommunityPost {
+  id: string;
+  title: string;
+  excerpt: string;
+  themeId: ThemeId;
+  authorName: string;
+  roleLabel: string;
+  createdAt: string;
+}
+
+export interface LearningPath {
+  id: string;
+  title: string;
+  summary: string;
+  level: string;
+  duration: string;
+  teacher: string;
+  themeId: ThemeId;
+  lessons: string[];
+}
+
+export interface TeachingCircle {
+  id: string;
+  title: string;
+  focus: string;
+  format: string;
+  schedule: string;
+  capacity: string;
+  host: string;
+}
+
+export interface ResourceKit {
+  id: string;
+  title: string;
+  description: string;
+  format: string;
+}
+
+export interface CommunitySpotlight {
+  id: string;
+  title: string;
+  excerpt: string;
+  audience: string;
+  themeId: ThemeId;
+}
+
 export interface UserRecord {
   id: string;
   createdAt: string;
@@ -76,11 +131,14 @@ export interface ReflectionResult {
   progress: ProgressSummary;
   gainedXp: number;
   recentEntries: ReflectionEntry[];
+  storageMode: "mysql" | "file";
 }
 
 export interface DashboardPayload {
   progress: ProgressSummary;
   dailyGuidance: DailyGuidance;
   recentEntries: ReflectionEntry[];
+  savedItems: SavedReflection[];
+  communityPosts: CommunityPost[];
+  storageMode: "mysql" | "file";
 }
-
