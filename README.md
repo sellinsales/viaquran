@@ -26,16 +26,42 @@ ViaQuran is a mobile-first Quran reflection MVP built as a standalone `Next.js` 
 
 ## API notes
 
-ViaQuran is wired to `Al Quran Cloud` for verse retrieval with multiple editions. The app requests:
+ViaQuran can use Quran.Foundation Content APIs as the primary authenticated Quran source and fall back to Al Quran Cloud if those credentials are not configured or the request fails.
+
+Quran.Foundation setup:
+
+```env
+QF_CLIENT_ID=your_client_id
+QF_CLIENT_SECRET=your_client_secret
+QF_AUTH_BASE_URL=https://oauth2.quran.foundation
+QF_API_BASE_URL=https://apis.quran.foundation
+QF_ENGLISH_TRANSLATION_ID=131
+QF_URDU_TRANSLATION_ID=your_urdu_translation_resource_id
+```
+
+The integration follows Quran.Foundation's documented production flow:
+
+- token endpoint: `POST /oauth2/token`
+- flow: `client_credentials`
+- scope: `content`
+- required headers: `x-auth-token` and `x-client-id`
+- production auth base: `https://oauth2.quran.foundation`
+- production API base: `https://apis.quran.foundation`
+
+Fallback source:
+
+ViaQuran also supports `Al Quran Cloud` for verse retrieval with multiple editions. The fallback requests:
 
 - `quran-uthmani` for Arabic
 - `en.sahih` for English
 - `ur.jalandhry` for Urdu
 
-If the live request fails, the app falls back to curated local ayah content for the MVP experience.
+If external requests fail, the app falls back to curated local ayah content for the MVP experience.
 
 Primary source used for the API contract:
 
+- https://api-docs.quran.com/docs/quickstart/
+- https://api-docs.quran.com/docs/content_apis_versioned/4.0.0/verses-by-verse-key/
 - https://alquran.cloud/api
 
 ## Local run
