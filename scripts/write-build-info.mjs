@@ -19,6 +19,12 @@ function readGitValue(args) {
 }
 
 const packageJson = JSON.parse(await fs.readFile(packageJsonPath, "utf8"));
+const nextPackageJson = JSON.parse(
+  await fs.readFile(path.join(rootDir, "node_modules", "next", "package.json"), "utf8"),
+);
+const reactPackageJson = JSON.parse(
+  await fs.readFile(path.join(rootDir, "node_modules", "react", "package.json"), "utf8"),
+);
 const commitFull = readGitValue(["rev-parse", "HEAD"]);
 const commitShort = readGitValue(["rev-parse", "--short", "HEAD"]);
 const branch = readGitValue(["rev-parse", "--abbrev-ref", "HEAD"]);
@@ -34,7 +40,9 @@ const payload = {
   runtime: {
     node: process.version,
     nextDeclared: packageJson.dependencies?.next ?? null,
+    nextInstalled: nextPackageJson.version ?? null,
     reactDeclared: packageJson.dependencies?.react ?? null,
+    reactInstalled: reactPackageJson.version ?? null,
   },
 };
 

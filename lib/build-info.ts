@@ -1,6 +1,8 @@
 import fs from "fs/promises";
 import path from "path";
+import nextPackageJson from "next/package.json";
 import packageJson from "@/package.json";
+import reactPackageJson from "react/package.json";
 
 export interface BuildInfo {
   appVersion: string;
@@ -13,7 +15,9 @@ export interface BuildInfo {
   runtime: {
     node: string | null;
     nextDeclared: string | null;
+    nextInstalled: string | null;
     reactDeclared: string | null;
+    reactInstalled: string | null;
   };
 }
 
@@ -35,7 +39,9 @@ export async function getBuildInfo(): Promise<BuildInfo> {
       runtime: {
         node: parsed.runtime?.node ?? null,
         nextDeclared: parsed.runtime?.nextDeclared ?? packageJson.dependencies.next ?? null,
+        nextInstalled: parsed.runtime?.nextInstalled ?? nextPackageJson.version ?? null,
         reactDeclared: parsed.runtime?.reactDeclared ?? packageJson.dependencies.react ?? null,
+        reactInstalled: parsed.runtime?.reactInstalled ?? reactPackageJson.version ?? null,
       },
     };
   } catch {
@@ -50,7 +56,9 @@ export async function getBuildInfo(): Promise<BuildInfo> {
       runtime: {
         node: process.version,
         nextDeclared: packageJson.dependencies.next ?? null,
+        nextInstalled: nextPackageJson.version ?? null,
         reactDeclared: packageJson.dependencies.react ?? null,
+        reactInstalled: reactPackageJson.version ?? null,
       },
     };
   }

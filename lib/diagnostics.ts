@@ -1,6 +1,9 @@
 import fs from "fs/promises";
 import path from "path";
+import { RowDataPacket } from "mysql2/promise";
+import nextPackageJson from "next/package.json";
 import packageJson from "@/package.json";
+import reactPackageJson from "react/package.json";
 import { getBuildInfo } from "@/lib/build-info";
 import { getDbPool } from "@/lib/db";
 import { getStorageMode } from "@/lib/storage";
@@ -39,7 +42,7 @@ async function checkDatabase() {
   }
 
   const pool = getDbPool();
-  const [rows] = await pool.query<Array<{ ok: number }>>("SELECT 1 AS ok");
+  const [rows] = await pool.query<Array<RowDataPacket & { ok: number }>>("SELECT 1 AS ok");
 
   return {
     configured: true,
@@ -163,6 +166,29 @@ async function checkGitHubLatest(buildCommit: string | null) {
   };
 }
 
+async function checkLatestNextVersion(installedVersion: string | null) {
+  const response = await fetch("https://registry.npmjs.org/next/latest", {
+    headers: {
+      Accept: "application/json",
+    },
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new Error(`npm registry returned ${response.status}`);
+  }
+
+  const payload = (await response.json()) as {
+    version?: string;
+  };
+
+  return {
+    latest: payload.version ?? null,
+    installed: installedVersion,
+    isLatest: Boolean(payload.version && installedVersion && payload.version === installedVersion),
+  };
+}
+
 export async function getDiagnosticsReport() {
   const buildInfo = await getBuildInfo();
   const storageMode = await getStorageMode();
@@ -173,6 +199,7 @@ export async function getDiagnosticsReport() {
     runCheck("alQuranCloud", checkAlQuranCloud),
     runCheck("quranFoundation", checkQuranFoundation),
     runCheck("githubLatest", () => checkGitHubLatest(buildInfo.git.commitFull)),
+    runCheck("nextLatest", () => checkLatestNextVersion(buildInfo.runtime.nextInstalled)),
   ]);
 
   return {
@@ -183,8 +210,10 @@ export async function getDiagnosticsReport() {
       node: process.version,
       nodeEnv: process.env.NODE_ENV ?? null,
       storageMode,
-      nextInstalled: packageJson.dependencies.next,
-      reactInstalled: packageJson.dependencies.react,
+      nextDeclared: packageJson.dependencies.next,
+      nextInstalled: nextPackageJson.version,
+      reactDeclared: packageJson.dependencies.react,
+      reactInstalled: reactPackageJson.version,
     },
     env: {
       diagnosticsRepoConfigured: Boolean(process.env.DIAGNOSTICS_GITHUB_REPO),

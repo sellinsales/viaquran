@@ -59,6 +59,7 @@ Storage modes:
 - `POST /api/save`: save a reflection to the library
 - `POST /api/share`: publish a short note to the community wall
 - `GET /api/health`: deployment health check and active storage mode
+- `GET /api/diagnostics`: protected deep diagnostics for build/version/DB/API connectivity
 
 ## Database setup
 
@@ -96,6 +97,40 @@ Typical deployment flow:
 6. Verify `https://your-domain/api/health`.
 
 If DB credentials are not ready yet, the platform will still run with local file storage.
+
+## Deployment diagnostics
+
+This repo now includes two ways to trace online deployment issues:
+
+1. `GET /api/health`
+   This stays lightweight and public. It returns the active storage mode, app version, build time, and commit.
+
+2. `GET /api/diagnostics`
+   This is intended for server-side troubleshooting and should be protected with `DIAGNOSTICS_TOKEN`.
+
+Set these env vars on the server:
+
+```env
+DIAGNOSTICS_TOKEN=replace_with_random_secret
+DIAGNOSTICS_GITHUB_REPO=sellinsales/viaquran
+```
+
+Then test the live deployment from your local machine:
+
+```bash
+DEPLOYMENT_URL=https://your-domain.com DIAGNOSTICS_TOKEN=replace_with_random_secret npm run check:deployment
+```
+
+The diagnostics report includes:
+
+- app version and build timestamp
+- deployed git commit and branch when available
+- whether the running server matches the latest commit on `main`
+- active storage mode
+- MariaDB/MySQL connectivity
+- local file-store availability
+- Al Quran Cloud reachability
+- Quran Foundation token flow reachability when credentials are configured
 
 ## Quran API notes
 
