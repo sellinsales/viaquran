@@ -144,7 +144,7 @@ async function getOrCreateUser(connection: PoolConnection, externalUserId: strin
     external_user_id: externalUserId,
     total_xp: 0,
     longest_streak: 0,
-  } satisfies UserRow;
+  } as UserRow;
 }
 
 async function getRecentEntriesForUser(connection: PoolConnection, userId: number, limit = 4) {
@@ -262,4 +262,3 @@ export async function recordReflection(userId: string, input: string, themeId: T
     connection.release();
   }
 }
-
