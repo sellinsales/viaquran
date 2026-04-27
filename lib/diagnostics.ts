@@ -9,8 +9,9 @@ import { getDbPool } from "@/lib/db";
 import { getStorageMode } from "@/lib/storage";
 
 const STORE_FILE_PATH = path.join(process.cwd(), "data", "store.json");
-const API_BASE_URL = process.env.QURAN_API_BASE_URL ?? "https://api.alquran.cloud/v1";
 const QF_AUTH_BASE_URL = process.env.QF_AUTH_BASE_URL ?? "https://oauth2.quran.foundation";
+const QF_API_BASE_URL = process.env.QF_API_BASE_URL ?? "https://apis.quran.foundation";
+const QF_ENGLISH_TRANSLATION_ID = process.env.QF_ENGLISH_TRANSLATION_ID ?? "131";
 
 async function runCheck<T>(name: string, action: () => Promise<T>) {
   const startedAt = Date.now();
@@ -61,27 +62,6 @@ async function checkFileStore() {
   };
 }
 
-async function checkAlQuranCloud() {
-  const response = await fetch(`${API_BASE_URL}/ayah/1:1/editions/quran-uthmani,en.sahih,ur.jalandhry`, {
-    cache: "no-store",
-  });
-
-  if (!response.ok) {
-    throw new Error(`Al Quran Cloud returned ${response.status}`);
-  }
-
-  const payload = (await response.json().catch(() => null)) as
-    | { data?: unknown[]; status?: string }
-    | null;
-
-  return {
-    url: API_BASE_URL,
-    status: response.status,
-    payloadStatus: payload?.status ?? null,
-    editionsReturned: Array.isArray(payload?.data) ? payload.data.length : 0,
-  };
-}
-
 async function checkQuranFoundation() {
   const configured = Boolean(process.env.QF_CLIENT_ID && process.env.QF_CLIENT_SECRET);
 
@@ -89,6 +69,7 @@ async function checkQuranFoundation() {
     return {
       configured: false,
       authBaseUrl: QF_AUTH_BASE_URL,
+      apiBaseUrl: QF_API_BASE_URL,
     };
   }
 
@@ -117,12 +98,50 @@ async function checkQuranFoundation() {
     | { access_token?: string; expires_in?: number }
     | null;
 
+  if (!payload?.access_token) {
+    throw new Error("Quran Foundation token response did not include an access token.");
+  }
+
+  const verseQuery = new URLSearchParams({
+    fields: "text_uthmani,verse_key",
+    translations: QF_ENGLISH_TRANSLATION_ID,
+  });
+  const verseResponse = await fetch(
+    `${QF_API_BASE_URL}/content/api/v4/verses/by_key/1:1?${verseQuery.toString()}`,
+    {
+      headers: {
+        "x-auth-token": payload.access_token,
+        "x-client-id": process.env.QF_CLIENT_ID!,
+      },
+      cache: "no-store",
+    },
+  );
+
+  if (!verseResponse.ok) {
+    throw new Error(`Quran Foundation verse endpoint returned ${verseResponse.status}`);
+  }
+
+  const versePayload = (await verseResponse.json().catch(() => null)) as
+    | {
+        verse?: {
+          verse_key?: string;
+          translations?: Array<{ resource_id?: number; text?: string }>;
+        };
+      }
+    | null;
+
   return {
     configured: true,
     authBaseUrl: QF_AUTH_BASE_URL,
-    status: response.status,
-    hasAccessToken: Boolean(payload?.access_token),
+    apiBaseUrl: QF_API_BASE_URL,
+    tokenStatus: response.status,
+    hasAccessToken: true,
     expiresIn: payload?.expires_in ?? null,
+    verseStatus: verseResponse.status,
+    verseKey: versePayload?.verse?.verse_key ?? null,
+    translationCount: Array.isArray(versePayload?.verse?.translations)
+      ? versePayload.verse.translations.length
+      : 0,
   };
 }
 
@@ -196,7 +215,6 @@ export async function getDiagnosticsReport() {
   const checks = await Promise.all([
     runCheck("database", checkDatabase),
     runCheck("fileStore", checkFileStore),
-    runCheck("alQuranCloud", checkAlQuranCloud),
     runCheck("quranFoundation", checkQuranFoundation),
     runCheck("githubLatest", () => checkGitHubLatest(buildInfo.git.commitFull)),
     runCheck("nextLatest", () => checkLatestNextVersion(buildInfo.runtime.nextInstalled)),

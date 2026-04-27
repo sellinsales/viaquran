@@ -1,7 +1,5 @@
 import { ThemeDefinition } from "@/lib/types";
 
-const API_BASE_URL = process.env.QURAN_API_BASE_URL ?? "https://api.alquran.cloud/v1";
-const EDITIONS = ["quran-uthmani", "en.sahih", "ur.jalandhry"] as const;
 const QF_AUTH_BASE_URL = process.env.QF_AUTH_BASE_URL ?? "https://oauth2.quran.foundation";
 const QF_API_BASE_URL = process.env.QF_API_BASE_URL ?? "https://apis.quran.foundation";
 const QF_ENGLISH_TRANSLATION_ID = process.env.QF_ENGLISH_TRANSLATION_ID ?? "131";
@@ -14,18 +12,6 @@ let tokenCache:
     }
   | null = null;
 let tokenInflight: Promise<string> | null = null;
-
-interface ApiAyahResponse {
-  code: number;
-  status: string;
-  data: Array<{
-    text: string;
-    edition?: {
-      identifier?: string;
-      englishName?: string;
-    };
-  }>;
-}
 
 interface QuranFoundationVerseResponse {
   verse?: {
@@ -161,43 +147,17 @@ async function fetchQuranFoundationVerse(theme: ThemeDefinition, retry = true) {
   };
 }
 
-async function fetchAlQuranCloudVerse(theme: ThemeDefinition) {
-  const response = await fetch(
-    `${API_BASE_URL}/ayah/${theme.ayah.reference}/editions/${EDITIONS.join(",")}`,
-    { cache: "no-store" },
-  ).catch(() => null);
-
-  if (!response || !response.ok) {
-    return theme.ayah;
-  }
-
-  const payload = (await response.json().catch(() => null)) as ApiAyahResponse | null;
-
-  if (!payload || !Array.isArray(payload.data)) {
-    return theme.ayah;
-  }
-
-  const byEdition = new Map(
-    payload.data.map((item) => [item.edition?.identifier ?? "", item.text]),
-  );
-
-  return {
-    reference: theme.ayah.reference,
-    source: "Al Quran Cloud API",
-    arabic: byEdition.get("quran-uthmani") ?? theme.ayah.arabic,
-    english: byEdition.get("en.sahih") ?? theme.ayah.english,
-    urdu: byEdition.get("ur.jalandhry") ?? theme.ayah.urdu,
-  };
-}
-
 export async function getAyahForTheme(theme: ThemeDefinition) {
   if (hasQuranFoundationConfig()) {
     try {
       return await fetchQuranFoundationVerse(theme);
-    } catch {
-      return fetchAlQuranCloudVerse(theme);
+    } catch (error) {
+      console.warn(
+        "Quran Foundation verse request failed. Falling back to bundled ayah content.",
+        error,
+      );
     }
   }
 
-  return fetchAlQuranCloudVerse(theme);
+  return theme.ayah;
 }

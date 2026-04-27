@@ -32,7 +32,6 @@ Copy `.env.example` to `.env`.
 
 ```env
 VIAQURAN_STORAGE_MODE=auto
-QURAN_API_BASE_URL=https://api.alquran.cloud/v1
 QF_CLIENT_ID=
 QF_CLIENT_SECRET=
 QF_AUTH_BASE_URL=https://oauth2.quran.foundation
@@ -93,10 +92,18 @@ Typical deployment flow:
 2. Run `npm install`.
 3. Run `npm run build`.
 4. Set startup file to `server.js`.
-5. Add your environment variables in cPanel.
+5. Add your database environment variables and set `VIAQURAN_STORAGE_MODE=mysql` in cPanel.
 6. Verify `https://your-domain/api/health`.
 
-If DB credentials are not ready yet, the platform will still run with local file storage.
+For the GitHub Actions FTPS workflow, the deployed runtime bundle is:
+
+- `.next/standalone/`
+- `server.js`
+- `package.json`
+- `package-lock.json`
+- `next.config.mjs`
+
+That standalone bundle already contains the runtime `.next/static`, `public`, and `data` folders it needs. The SQL schema file stays in the repository at [data/schema.sql](/d:/projects/viaquran/data/schema.sql) for manual setup when needed, but it is not part of the runtime deployment path.
 
 ## Deployment diagnostics
 
@@ -129,20 +136,12 @@ The diagnostics report includes:
 - active storage mode
 - MariaDB/MySQL connectivity
 - local file-store availability
-- Al Quran Cloud reachability
-- Quran Foundation token flow reachability when credentials are configured
+- Quran Foundation token and verse endpoint reachability when credentials are configured
 
 ## Quran API notes
 
 Primary Quran source:
 
 - Quran.Foundation Content APIs when `QF_CLIENT_ID` and `QF_CLIENT_SECRET` are configured
-
-Fallback Quran source:
-
-- `Al Quran Cloud` using:
-  - `quran-uthmani`
-  - `en.sahih`
-  - `ur.jalandhry`
 
 If external requests fail, the app falls back to the local themed ayah content bundled in the repo.

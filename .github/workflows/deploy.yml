@@ -33,19 +33,11 @@ jobs:
           rm -rf deploy
           mkdir -p deploy/.next
           cp -R .next/standalone deploy/.next/
-          cp -R .next/static deploy/.next/
-          cp -R public deploy/
-          mkdir -p deploy/.next/standalone/viaquran/.next
-          mkdir -p deploy/.next/standalone/viaquran/public
-          cp -R .next/static deploy/.next/standalone/viaquran/.next/
-          cp -R public/. deploy/.next/standalone/viaquran/public/
           cp package.json deploy/
           cp package-lock.json deploy/
           cp server.js deploy/
           cp next.config.mjs deploy/
           cp .env.example deploy/
-          mkdir -p deploy/data
-          cp data/schema.sql deploy/data/
 
       - name: Upload over FTPS
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
