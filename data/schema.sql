@@ -55,3 +55,32 @@ CREATE TABLE IF NOT EXISTS community_posts (
     ON DELETE CASCADE,
   INDEX idx_community_posts_created (created_at DESC)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS quran_chapters (
+  chapter_id SMALLINT UNSIGNED NOT NULL PRIMARY KEY,
+  name_simple VARCHAR(191) NOT NULL,
+  name_arabic VARCHAR(191) NOT NULL,
+  name_complex VARCHAR(191) NOT NULL,
+  translated_name VARCHAR(191) NOT NULL,
+  revelation_place VARCHAR(32) NOT NULL,
+  verses_count SMALLINT UNSIGNED NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS quran_verses (
+  verse_key VARCHAR(16) NOT NULL PRIMARY KEY,
+  verse_db_id INT UNSIGNED NULL,
+  chapter_id SMALLINT UNSIGNED NOT NULL,
+  verse_number SMALLINT UNSIGNED NOT NULL,
+  juz_number SMALLINT UNSIGNED NULL,
+  page_number SMALLINT UNSIGNED NULL,
+  hizb_number SMALLINT UNSIGNED NULL,
+  rub_el_hizb_number SMALLINT UNSIGNED NULL,
+  text_uthmani TEXT NOT NULL,
+  english_translation MEDIUMTEXT NOT NULL,
+  urdu_translation MEDIUMTEXT NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_quran_verses_chapter (chapter_id, verse_number)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

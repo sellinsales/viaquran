@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, ReactNode, SVGProps, useEffect, useMemo, useState } from "react";
+import { QuranBrowser } from "@/components/quran-browser";
 import { QuranMatchCard } from "@/components/quran-match-card";
 import { EXAMPLE_INPUTS, THEMES } from "@/lib/theme-data";
 import { detectTheme } from "@/lib/theme-engine";
@@ -511,16 +512,25 @@ export function ViaQuranApp() {
       </header>
 
       <div id="top" className="mx-auto flex w-full max-w-[1280px] flex-col gap-8 px-4 py-6 md:px-8 md:py-8">
-        <section className="overflow-hidden rounded-[36px] border border-[#e2d8c9] bg-[radial-gradient(circle_at_top_left,#ffffff_0%,#f8f1e2_46%,#ecf2e9_100%)] shadow-[0_30px_70px_rgba(73,60,41,0.09)]">
-          <div className="grid gap-8 px-6 py-8 md:px-10 md:py-10 xl:grid-cols-[1.1fr_0.9fr]">
+        <section className="overflow-hidden rounded-[36px] border border-[#ddd2c0] bg-[#1d2a21] shadow-[0_30px_70px_rgba(73,60,41,0.14)]">
+          <div
+            className="relative"
+            style={{
+              backgroundImage:
+                "linear-gradient(90deg, rgba(18,28,23,0.88) 0%, rgba(18,28,23,0.76) 42%, rgba(18,28,23,0.42) 100%), url('/header.png')",
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+            }}
+          >
+            <div className="grid gap-8 px-6 py-8 md:px-10 md:py-12 xl:grid-cols-[1.12fr_0.88fr]">
             <div className="flex flex-col justify-center">
-              <div className="inline-flex w-fit rounded-full border border-[#d7e0d7] bg-white/80 px-4 py-2 text-sm font-semibold text-[#47634f]">
+              <div className="inline-flex w-fit rounded-full border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.12)] px-4 py-2 text-sm font-semibold text-[#eef6f0]">
                 Match your life and living with Allah&apos;s message
               </div>
-              <h1 className="mt-6 max-w-[680px] font-serif text-[3rem] leading-[1.02] text-[#17211b] md:text-[4.8rem]">
+              <h1 className="mt-6 max-w-[720px] font-serif text-[3rem] leading-[1.02] text-white md:text-[4.9rem]">
                 Learn to connect everyday living with what Allah actually says in the Quran.
               </h1>
-              <p className="mt-5 max-w-[610px] text-[1.06rem] leading-8 text-[#55625a]">
+              <p className="mt-5 max-w-[640px] text-[1.08rem] leading-8 text-[#edf1eb]">
                 Many people pray, work, speak, struggle, parent, and make decisions as routine. ViaQuran helps them pause,
                 ask where Allah speaks about these matters, and move from habit into conscious obedience, understanding, and growth.
               </p>
@@ -535,7 +545,7 @@ export function ViaQuranApp() {
                 </a>
                 <a
                   href="#community"
-                  className="inline-flex items-center gap-3 rounded-2xl border border-[#8eb29f] bg-white/85 px-7 py-4 text-base font-semibold text-[#1f6a4d]"
+                  className="inline-flex items-center gap-3 rounded-2xl border border-[rgba(255,255,255,0.28)] bg-[rgba(255,255,255,0.12)] px-7 py-4 text-base font-semibold text-white"
                 >
                   <CircleIcon className="h-5 w-5" />
                   Enter Reminder Circle
@@ -544,97 +554,60 @@ export function ViaQuranApp() {
 
               <div className="mt-8 grid gap-4 sm:grid-cols-3">
                 <MetricCard label="Alignment pulse" value={`${alignmentPulse}%`} help="A simple indicator showing whether reflection is becoming part of your real routine." />
-                <MetricCard label="Private library" value={`${savedItems.length}`} help="Keep ayah-backed reminders for revision, mentoring, and personal discipline." />
-                <MetricCard label="Circle activity" value={`${communityPosts.length}`} help="Questions, anonymous reflections, and short reminders shared with the community." />
+                <MetricCard label="Private library" value={`${savedItems.length}`} help="Keep ayah-backed reminders for revision and personal discipline." />
+                <MetricCard label="Circle activity" value={`${communityPosts.length}`} help="Questions and anonymous reflections shared with the community." />
               </div>
             </div>
 
-            <div className="grid gap-5">
-              <div className="overflow-hidden rounded-[30px] border border-[#dccfb8] bg-[#f4ebdb] p-3 shadow-[0_22px_42px_rgba(76,63,40,0.12)]">
-                <img
-                  src="/header.png"
-                  alt="ViaQuran community and reflection illustration"
-                  className="h-[320px] w-full rounded-[24px] object-cover"
-                />
+            <div className="rounded-[30px] border border-[rgba(255,255,255,0.14)] bg-[rgba(255,255,255,0.12)] p-6 shadow-[0_16px_28px_rgba(18,28,23,0.18)] backdrop-blur">
+              <div className="text-sm font-semibold uppercase tracking-[0.18em] text-[#dcebdd]">Why this matters</div>
+              <div className="mt-3 font-serif text-[1.9rem] leading-tight text-white">
+                Worship becomes stronger when people know Allah&apos;s instruction, not just the routine.
               </div>
-
-              <div className="rounded-[30px] border border-[#e1d8c8] bg-white/92 p-6 shadow-[0_16px_28px_rgba(68,57,40,0.08)]">
-                <div className="text-sm font-semibold uppercase tracking-[0.18em] text-[#728075]">Why this matters</div>
-                <div className="mt-3 font-serif text-[1.9rem] leading-tight text-[#1a251d]">
-                  Worship becomes stronger when people know Allah&apos;s instruction, not just the routine.
-                </div>
-                <p className="mt-3 text-[1rem] leading-7 text-[#5a655d]">
+              <p className="mt-3 text-[1rem] leading-7 text-[#edf1eb]">
                   Example: many people pray every day because it is familiar. But when they discover where the Quran speaks
                   about prayer, remembrance, humility, and obedience, salah is no longer only routine. It becomes a conscious
                   response to Allah&apos;s command.
-                </p>
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <Pill>{dailyGuidance?.ayahReference ?? guidanceTheme.ayah.reference}</Pill>
-                  <Pill>{themeLabel(guidanceTheme.id)}</Pill>
-                  <Pill>{dailyGuidance?.dateLabel ?? "Today"}</Pill>
-                </div>
+              </p>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <Pill>{dailyGuidance?.ayahReference ?? guidanceTheme.ayah.reference}</Pill>
+                <Pill>{themeLabel(guidanceTheme.id)}</Pill>
+                <Pill>{dailyGuidance?.dateLabel ?? "Today"}</Pill>
               </div>
             </div>
           </div>
+          </div>
         </section>
 
-        <section id="purpose" className="grid gap-6 xl:grid-cols-[0.98fr_1.02fr]">
-          <div className="rounded-[34px] border border-[#e5ddcf] bg-white p-6 shadow-[0_18px_35px_rgba(79,68,48,0.05)] md:p-8">
-            <SectionTitle
-              eyebrow="Purpose"
-              title="A clear purpose for users: relate ordinary life back to Quranic guidance"
-              text="This platform exists to help people stop treating faith as a disconnected subject. Daily routines, prayer, honesty, anger, gratitude, family life, and responsibilities should all be understood in the light of Quran."
+        <section id="purpose" className="rounded-[34px] border border-[#e5ddcf] bg-white p-6 shadow-[0_18px_35px_rgba(79,68,48,0.05)] md:p-8">
+          <SectionTitle
+            eyebrow="Purpose"
+            title="Bring one part of life, find one ayah, and act on one next step"
+            text="This platform exists to help people stop treating faith as a disconnected subject. Daily routines, prayer, honesty, anger, gratitude, family life, and responsibilities should all be understood in the light of Quran."
+          />
+
+          <div className="mt-6 grid gap-4 lg:grid-cols-3">
+            <StoryCard
+              title="From routine to obedience"
+              text="A person may pray every day, but still never ask where Allah teaches about prayer, remembrance, and humility. Once the Quranic basis becomes visible, prayer becomes more conscious and sincere."
             />
-
-            <div className="mt-6 grid gap-4">
-              <StoryCard
-                title="From routine to obedience"
-                text="A person may pray every day, but still never ask where Allah teaches about prayer, remembrance, and humility. Once the Quranic basis becomes visible, prayer becomes more conscious and sincere."
-              />
-              <StoryCard
-                title="From confusion to guidance"
-                text="When a user posts a real-life struggle, the platform helps connect that struggle with an ayah, a translation, and a practical path forward."
-              />
-              <StoryCard
-                title="From isolation to community"
-                text="Reminder circles and anonymous posts give people a safe way to ask, reflect, and learn together without shame."
-              />
-            </div>
-          </div>
-
-          <div className="rounded-[34px] border border-[#e5ddcf] bg-[linear-gradient(180deg,#f6faf5_0%,#eef3eb_100%)] p-6 shadow-[0_18px_35px_rgba(79,68,48,0.05)] md:p-8">
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <div className="text-sm font-semibold uppercase tracking-[0.16em] text-[#6e7a72]">How users should think about this app</div>
-                <div className="mt-2 font-serif text-[2rem] leading-tight text-[#193125]">Bring one part of life, find one ayah, act on one next step.</div>
-              </div>
-              <SparkIcon className="h-10 w-10 text-[#1f6a4d]" />
-            </div>
-            <div className="mt-5 grid gap-3">
-              {[
-                "Describe a routine, habit, worry, or question honestly.",
-                "Read the ayah and translation carefully, not only the answer summary.",
-                "Understand what obedience looks like in this situation.",
-                "Choose one action step and practice it in daily life.",
-                "Share it privately, anonymously, or in the reminder circle.",
-              ].map((step, index) => (
-                <div key={step} className="rounded-[18px] bg-white/85 px-4 py-3 text-sm leading-7 text-[#334038]">
-                  <span className="mr-2 font-semibold text-[#1f6a4d]">Step {index + 1}.</span>
-                  {step}
-                </div>
-              ))}
-            </div>
+            <StoryCard
+              title="From confusion to guidance"
+              text="When a user posts a real-life struggle, the platform should connect that struggle with an ayah, a translation, and a practical path forward."
+            />
+            <StoryCard
+              title="From isolation to community"
+              text="Reminder circles and anonymous posts give people a safe way to ask, reflect, and learn together without shame."
+            />
           </div>
         </section>
-
-        <HighlightGallery />
 
         <section id="matcher" className="grid gap-6 xl:grid-cols-[1.06fr_0.94fr]">
           <div className="rounded-[34px] border border-[#e5ddd0] bg-[linear-gradient(180deg,#faf7ef_0%,#f4ecdd_100%)] p-6 shadow-[0_20px_40px_rgba(79,68,48,0.06)] md:p-8">
             <SectionTitle
               eyebrow="Life Matcher"
-              title="Post a routine, feeling, question, or personal conflict and match it with Quranic guidance"
-              text="This is the core exercise. Write what happened in your real life. The app reads the pattern, attaches it to a theme, and responds with ayah-backed improvement steps."
+              title="Type what is happening in your life and ask: what does the Quran say about this?"
+              text="This is the main action of the website. Write a routine, weakness, question, family concern, worship issue, or daily struggle. The app matches it to Quranic guidance, then shows the ayah, translation, and practical next steps."
             />
 
             <form onSubmit={handleSubmit} className="mt-7">
@@ -674,7 +647,7 @@ export function ViaQuranApp() {
                   {isReflecting ? "Matching..." : "Match With Quran Guidance"}
                 </button>
                 <div className="text-sm leading-6 text-[#617068]">
-                  Best used for routines, habits, family tensions, work stress, or questions you want the community to refine.
+                  Best used for routines, habits, prayer discipline, family tensions, work stress, or questions you want the community to refine.
                 </div>
               </div>
             </form>
@@ -690,9 +663,9 @@ export function ViaQuranApp() {
 
           <div id="circle" className="rounded-[34px] border border-[#e2dacb] bg-white p-6 shadow-[0_20px_40px_rgba(79,68,48,0.06)] md:p-8">
             <SectionTitle
-              eyebrow="Reminder Circle"
-              title="Turn the match into a guided reminder, a discussion prompt, or an anonymous community post"
-              text="Every response can stay private, go into your library, or be sent into the circle for others to react to, learn from, and eventually verify."
+              eyebrow="How to use the result"
+              title="Read the ayah, understand the meaning, then act on it step by step"
+              text="The purpose is not only to receive a result. The purpose is to understand the ayah, relate it to your life, and begin changing the next action you take."
             />
 
             <div className="mt-7 rounded-[24px] border border-[#e6e0d4] bg-[linear-gradient(180deg,#fbfaf7_0%,#f3efe6_100%)] p-5">
@@ -743,6 +716,8 @@ export function ViaQuranApp() {
             </div>
           </div>
         </section>
+
+        <HighlightGallery />
 
         <section className="grid gap-6 xl:grid-cols-[1fr_1fr]">
           <QuranMatchCard
@@ -816,6 +791,8 @@ export function ViaQuranApp() {
             </div>
           </div>
         </section>
+
+        <QuranBrowser />
 
         <section id="community" className="grid gap-6 xl:grid-cols-[0.94fr_1.06fr]">
           <div className="rounded-[34px] border border-[#e5ddcf] bg-white p-6 shadow-[0_18px_35px_rgba(79,68,48,0.05)] md:p-8">

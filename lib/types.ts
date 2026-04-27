@@ -15,6 +15,37 @@ export interface AyahPayload {
   urdu: string;
 }
 
+export interface QuranChapterSummary {
+  id: number;
+  nameSimple: string;
+  nameArabic: string;
+  nameComplex: string;
+  translatedName: string;
+  revelationPlace: string;
+  versesCount: number;
+}
+
+export interface QuranVersePayload {
+  id: number | null;
+  verseKey: string;
+  verseNumber: number;
+  chapterId: number;
+  juzNumber: number | null;
+  pageNumber: number | null;
+  hizbNumber: number | null;
+  rubElHizbNumber: number | null;
+  arabic: string;
+  english: string;
+  urdu: string;
+}
+
+export interface QuranChapterPayload {
+  chapter: QuranChapterSummary;
+  verses: QuranVersePayload[];
+  source: "database" | "quran_foundation";
+  cachedAt: string | null;
+}
+
 export interface ThemeDefinition {
   id: ThemeId;
   label: string;
