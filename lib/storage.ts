@@ -32,6 +32,7 @@ interface ReflectionRow extends RowDataPacket {
   id: number;
   input_text: string;
   theme_id: ThemeId;
+  ayah_reference: string | null;
   xp_gained: number;
   created_at: Date;
 }
@@ -68,6 +69,7 @@ interface FileReflectionRecord {
   userId: string;
   input: string;
   themeId: ThemeId;
+  ayahReference: string | null;
   xpGained: number;
   createdAt: string;
 }
@@ -131,9 +133,32 @@ function mapReflection(row: ReflectionRow): ReflectionEntry {
     id: `entry-${row.id}`,
     input: row.input_text,
     themeId: row.theme_id,
+    ayahReference: row.ayah_reference,
     createdAt: toIsoString(row.created_at),
     xpGained: row.xp_gained,
   };
+}
+
+async function ensureMysqlColumn(
+  tableName: "reflections",
+  columnName: "ayah_reference",
+  definitionSql: string,
+) {
+  const pool = getDbPool();
+  const [rows] = await pool.query<Array<RowDataPacket & { total: number }>>(
+    `
+      SELECT COUNT(*) AS total
+      FROM information_schema.COLUMNS
+      WHERE TABLE_SCHEMA = DATABASE()
+        AND TABLE_NAME = ?
+        AND COLUMN_NAME = ?
+    `,
+    [tableName, columnName],
+  );
+
+  if ((rows[0]?.total ?? 0) === 0) {
+    await pool.query(`ALTER TABLE ${tableName} ADD COLUMN ${definitionSql}`);
+  }
 }
 
 function mapSavedReflection(row: SavedReflectionRow): SavedReflection {
@@ -270,6 +295,7 @@ async function ensureMysqlSchema() {
           user_id BIGINT UNSIGNED NOT NULL,
           input_text TEXT NOT NULL,
           theme_id VARCHAR(32) NOT NULL,
+          ayah_reference VARCHAR(32) NULL,
           xp_gained INT NOT NULL DEFAULT 0,
           created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
           CONSTRAINT fk_reflections_user
@@ -278,6 +304,8 @@ async function ensureMysqlSchema() {
           INDEX idx_reflections_user_created (user_id, created_at DESC)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
       `);
+
+      await ensureMysqlColumn("reflections", "ayah_reference", "ayah_reference VARCHAR(32) NULL AFTER theme_id");
 
       await pool.query(`
         CREATE TABLE IF NOT EXISTS saved_reflections (
@@ -382,7 +410,7 @@ async function getOrCreateUser(connection: PoolConnection, externalUserId: strin
 async function getRecentEntriesForUser(connection: PoolConnection, userId: number, limit = 4) {
   const [rows] = await connection.query<ReflectionRow[]>(
     `
-      SELECT id, input_text, theme_id, xp_gained, created_at
+      SELECT id, input_text, theme_id, ayah_reference, xp_gained, created_at
       FROM reflections
       WHERE user_id = ?
       ORDER BY created_at DESC, id DESC
@@ -397,7 +425,7 @@ async function getRecentEntriesForUser(connection: PoolConnection, userId: numbe
 async function getEntriesForStreak(connection: PoolConnection, userId: number) {
   const [rows] = await connection.query<ReflectionRow[]>(
     `
-      SELECT id, input_text, theme_id, xp_gained, created_at
+      SELECT id, input_text, theme_id, ayah_reference, xp_gained, created_at
       FROM reflections
       WHERE user_id = ?
       ORDER BY created_at DESC, id DESC
@@ -460,6 +488,7 @@ function getFileEntriesForUser(store: FileStore, userId: string) {
       id: entry.id,
       input: entry.input,
       themeId: entry.themeId,
+      ayahReference: entry.ayahReference,
       createdAt: entry.createdAt,
       xpGained: entry.xpGained,
     }));
@@ -541,7 +570,12 @@ export async function getDashboard(userId: string) {
   };
 }
 
-export async function recordReflection(userId: string, input: string, themeId: ThemeId) {
+export async function recordReflection(
+  userId: string,
+  input: string,
+  themeId: ThemeId,
+  ayahReference: string,
+) {
   const storageMode = await resolveStorageMode();
 
   if (storageMode === "mysql") {
@@ -573,10 +607,10 @@ export async function recordReflection(userId: string, input: string, themeId: T
 
       await connection.query<ResultSetHeader>(
         `
-          INSERT INTO reflections (user_id, input_text, theme_id, xp_gained)
-          VALUES (?, ?, ?, ?)
+          INSERT INTO reflections (user_id, input_text, theme_id, ayah_reference, xp_gained)
+          VALUES (?, ?, ?, ?, ?)
         `,
-        [user.id, input, themeId, gainedXp],
+        [user.id, input, themeId, ayahReference, gainedXp],
       );
 
       const streakEntries = await getEntriesForStreak(connection, user.id);
@@ -631,6 +665,7 @@ export async function recordReflection(userId: string, input: string, themeId: T
       userId,
       input,
       themeId,
+      ayahReference,
       xpGained: gainedXp,
       createdAt: new Date().toISOString(),
     });
@@ -705,11 +740,11 @@ export async function saveReflection(
 
 export async function shareCommunityPost(
   userId: string,
-  payload: { title: string; excerpt: string; themeId: ThemeId },
+  payload: { title: string; excerpt: string; themeId: ThemeId; anonymous?: boolean },
 ) {
   const storageMode = await resolveStorageMode();
-  const authorName = buildGuestName(userId);
-  const roleLabel = "Community learner";
+  const authorName = payload.anonymous ? "Anonymous member" : buildGuestName(userId);
+  const roleLabel = payload.anonymous ? "Anonymous reflection" : "Community learner";
 
   if (storageMode === "mysql") {
     const pool = getDbPool();

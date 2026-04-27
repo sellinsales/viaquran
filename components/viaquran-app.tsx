@@ -1,12 +1,7 @@
 "use client";
 
 import { FormEvent, ReactNode, SVGProps, useEffect, useMemo, useState } from "react";
-import {
-  COMMUNITY_SPOTLIGHTS,
-  LEARNING_PATHS,
-  RESOURCE_KITS,
-  TEACHING_CIRCLES,
-} from "@/lib/platform-content";
+import { QuranMatchCard } from "@/components/quran-match-card";
 import { EXAMPLE_INPUTS, THEMES } from "@/lib/theme-data";
 import { detectTheme } from "@/lib/theme-engine";
 import { DashboardPayload, ReflectionResult, ThemeId } from "@/lib/types";
@@ -52,6 +47,17 @@ function formatDate(value: string) {
   }).format(new Date(value));
 }
 
+function computeAlignmentPulse(progress?: DashboardPayload["progress"]) {
+  if (!progress) {
+    return 42;
+  }
+
+  return Math.min(
+    96,
+    28 + progress.level * 6 + progress.currentStreak * 5 + Math.min(progress.reflectionsCount, 12) * 3,
+  );
+}
+
 async function copyText(text: string) {
   if (typeof navigator === "undefined" || !navigator.clipboard?.writeText) {
     throw new Error("Clipboard not available.");
@@ -62,15 +68,16 @@ async function copyText(text: string) {
 
 function buildShareText(result: ReflectionResult) {
   return [
+    "Match your life with Allah's message",
     `${result.theme.label} guidance`,
     result.ayah.reference,
     result.ayah.english,
     `Reflection: ${result.explanation}`,
-    `Action step: ${result.actionSteps[0] ?? "Take one Quran-linked step today."}`,
+    `Step 1: ${result.actionSteps[0] ?? "Take one Quran-linked step today."}`,
   ].join("\n");
 }
 
-function SectionHeader({
+function SectionTitle({
   eyebrow,
   title,
   text,
@@ -80,42 +87,125 @@ function SectionHeader({
   text: string;
 }) {
   return (
-    <div className="max-w-[720px]">
-      <div className="text-xs font-semibold uppercase tracking-[0.2em] text-[#6a7f71]">{eyebrow}</div>
-      <h2 className="mt-3 font-serif text-[2.2rem] leading-tight text-[#15221b] md:text-[2.8rem]">
-        {title}
-      </h2>
-      <p className="mt-3 text-[1.02rem] leading-7 text-[#59655d]">{text}</p>
+    <div className="max-w-[760px]">
+      <div className="text-xs font-semibold uppercase tracking-[0.18em] text-[#6b776f]">{eyebrow}</div>
+      <h2 className="mt-3 font-serif text-[2rem] leading-tight text-[#16211b] md:text-[2.8rem]">{title}</h2>
+      <p className="mt-3 text-[1rem] leading-7 text-[#59645d]">{text}</p>
     </div>
   );
 }
 
-function NavLink({
-  href,
-  children,
+function MetricCard({
+  label,
+  value,
+  help,
 }: {
-  href: string;
-  children: ReactNode;
+  label: string;
+  value: string;
+  help: string;
 }) {
   return (
-    <a href={href} className="transition hover:text-[#1f6a4d]">
-      {children}
-    </a>
+    <div className="rounded-[26px] border border-[#e6dece] bg-white/90 p-5 shadow-[0_16px_30px_rgba(72,60,42,0.05)]">
+      <div className="text-sm uppercase tracking-[0.12em] text-[#718077]">{label}</div>
+      <div className="mt-2 text-4xl font-semibold text-[#1f6a4d]">{value}</div>
+      <div className="mt-2 text-sm leading-6 text-[#5c655f]">{help}</div>
+    </div>
   );
 }
 
-function StatusBadge({
-  storageMode,
-}: {
-  storageMode: "mysql" | "file";
-}) {
-  const label = storageMode === "mysql" ? "MariaDB connected" : "Local storage fallback";
-  const tone =
-    storageMode === "mysql"
-      ? "border-[#b8d7c5] bg-[#edf8f1] text-[#1f6a4d]"
-      : "border-[#e2d3aa] bg-[#fff8e8] text-[#7c6021]";
+function Pill({ children }: { children: ReactNode }) {
+  return (
+    <div className="rounded-full border border-[#ddd7cb] bg-white px-3 py-2 text-sm font-medium text-[#5b665e]">
+      {children}
+    </div>
+  );
+}
 
-  return <div className={`rounded-full border px-3 py-2 text-sm font-semibold ${tone}`}>{label}</div>;
+function StoryCard({
+  title,
+  text,
+}: {
+  title: string;
+  text: string;
+}) {
+  return (
+    <div className="rounded-[24px] border border-[#e8e0d2] bg-white px-5 py-5 shadow-[0_12px_24px_rgba(73,60,41,0.04)]">
+      <div className="font-serif text-[1.4rem] leading-tight text-[#1c251f]">{title}</div>
+      <p className="mt-3 text-[0.98rem] leading-7 text-[#56625a]">{text}</p>
+    </div>
+  );
+}
+
+function HighlightGallery() {
+  const items = [
+    {
+      src: "/header.png",
+      alt: "Community learning and reflection",
+      title: "Daily life reflection",
+      text: "Turn routines, struggles, and choices into ayah-backed understanding.",
+    },
+    {
+      src: "/logo-.png",
+      alt: "Reminder circle and anonymous questions",
+      title: "Reminder circles",
+      text: "Share gentle reminders, ask anonymously, and build trust through reflection.",
+    },
+    {
+      src: "/logo_viaquran.png",
+      alt: "Quran guidance and personal growth",
+      title: "Step-by-step obedience",
+      text: "Move from habit to conscious obedience by seeing what Allah says and then acting on it.",
+    },
+  ];
+
+  return (
+    <section className="rounded-[34px] border border-[#e5ddcf] bg-white p-6 shadow-[0_18px_35px_rgba(79,68,48,0.05)] md:p-8">
+      <SectionTitle
+        eyebrow="Highlights"
+        title="A short gallery of what this platform is built to encourage"
+        text="ViaQuran is designed to make Quranic guidance visible inside ordinary life, family routines, learning circles, and personal improvement."
+      />
+
+      <div className="mt-6 grid gap-5 md:grid-cols-3">
+        {items.map((item) => (
+          <article key={item.title} className="overflow-hidden rounded-[26px] border border-[#ebe2d5] bg-[#fbf8f2]">
+            <img src={item.src} alt={item.alt} className="h-48 w-full object-cover" />
+            <div className="px-5 py-5">
+              <div className="font-serif text-[1.35rem] leading-tight text-[#1c251f]">{item.title}</div>
+              <p className="mt-3 text-sm leading-7 text-[#5b665e]">{item.text}</p>
+            </div>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function ToggleRow({
+  checked,
+  onChange,
+  label,
+  help,
+}: {
+  checked: boolean;
+  onChange: (value: boolean) => void;
+  label: string;
+  help: string;
+}) {
+  return (
+    <label className="flex items-start gap-3 rounded-[18px] border border-[#dfd9cd] bg-[#faf7f1] px-4 py-4">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(event) => onChange(event.target.checked)}
+        className="mt-1 h-4 w-4 rounded border-[#c5ccbf] text-[#1f6a4d] focus:ring-[#1f6a4d]"
+      />
+      <div>
+        <div className="font-semibold text-[#1b241e]">{label}</div>
+        <div className="mt-1 text-sm leading-6 text-[#5f6962]">{help}</div>
+      </div>
+    </label>
+  );
 }
 
 export function ViaQuranApp() {
@@ -126,11 +216,13 @@ export function ViaQuranApp() {
   const [error, setError] = useState("");
   const [saveMessage, setSaveMessage] = useState("");
   const [shareMessage, setShareMessage] = useState("");
-  const [postTitle, setPostTitle] = useState("A lesson I want to share");
+  const [postTitle, setPostTitle] = useState("A routine I want the community to review");
   const [postText, setPostText] = useState("");
+  const [postAnonymously, setPostAnonymously] = useState(true);
   const [isReflecting, setIsReflecting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
+  const [completedSteps, setCompletedSteps] = useState<string[]>([]);
 
   useEffect(() => {
     const nextUserId = createGuestId();
@@ -157,8 +249,11 @@ export function ViaQuranApp() {
       return;
     }
 
-    setPostTitle(`${result.theme.label} reminder for today`);
-    setPostText(`${result.explanation} Action step: ${result.actionSteps[0]}`);
+    setPostTitle(`Match review: ${result.theme.label}`);
+    setPostText(
+      `${result.explanation} My next step is: ${result.actionSteps[0] ?? "Take one practical Quran-linked action today."}`,
+    );
+    setCompletedSteps([]);
   }, [result]);
 
   const liveTheme = useMemo(() => detectTheme(input || postText || "patience"), [input, postText]);
@@ -170,6 +265,9 @@ export function ViaQuranApp() {
   const savedItems = dashboard?.savedItems ?? [];
   const communityPosts = dashboard?.communityPosts ?? [];
   const storageMode = result?.storageMode ?? dashboard?.storageMode ?? "file";
+  const alignmentPulse = computeAlignmentPulse(progress);
+  const activeSteps = result?.actionSteps ?? guidanceTheme.actionSteps;
+  const activeExplanation = result?.explanation ?? guidanceTheme.explanation;
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -255,7 +353,7 @@ export function ViaQuranApp() {
         savedItems?: DashboardPayload["savedItems"];
         storageMode?: "mysql" | "file";
       };
-      setDashboard((current: DashboardPayload | null) => {
+      setDashboard((current) => {
         if (!current) {
           return current;
         }
@@ -266,7 +364,7 @@ export function ViaQuranApp() {
           storageMode: payload.storageMode ?? current.storageMode,
         };
       });
-      setSaveMessage("Saved to your library.");
+      setSaveMessage("Saved to your private reminder library.");
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : "Could not save this reflection.");
     } finally {
@@ -274,7 +372,7 @@ export function ViaQuranApp() {
     }
   }
 
-  async function publishCommunityPost(title: string, excerpt: string) {
+  async function publishCommunityPost(title: string, excerpt: string, anonymous: boolean) {
     const response = await fetch("/api/share", {
       method: "POST",
       headers: {
@@ -284,6 +382,7 @@ export function ViaQuranApp() {
         userId,
         title,
         excerpt,
+        anonymous,
       }),
     });
     const rawPayload = (await response.json().catch(() => null)) as unknown;
@@ -300,7 +399,7 @@ export function ViaQuranApp() {
       communityPosts?: DashboardPayload["communityPosts"];
       storageMode?: "mysql" | "file";
     };
-    setDashboard((current: DashboardPayload | null) => {
+    setDashboard((current) => {
       if (!current) {
         return current;
       }
@@ -324,7 +423,7 @@ export function ViaQuranApp() {
     setIsPublishing(true);
 
     try {
-      await publishCommunityPost(`${result.theme.label} reminder`, result.explanation);
+      await publishCommunityPost(`${result.theme.label} reminder`, result.explanation, postAnonymously);
 
       const shareText = buildShareText(result);
       if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
@@ -336,7 +435,7 @@ export function ViaQuranApp() {
         await copyText(shareText);
       }
 
-      setShareMessage("Shared to the community wall and copied for external sharing.");
+      setShareMessage("Shared to the reminder circle and prepared for external sharing.");
     } catch (shareError) {
       setError(
         shareError instanceof Error ? shareError.message : "Could not share this reflection right now.",
@@ -354,15 +453,19 @@ export function ViaQuranApp() {
     const title = postTitle.trim();
     const excerpt = postText.trim();
     if (!title || !excerpt) {
-      setError("Write a short title and note before publishing.");
+      setError("Write a short title and prompt before publishing.");
       return;
     }
 
     setIsPublishing(true);
 
     try {
-      await publishCommunityPost(title, excerpt);
-      setShareMessage("Your note is now on the community wall.");
+      await publishCommunityPost(title, excerpt, postAnonymously);
+      setShareMessage(
+        postAnonymously
+          ? "Your anonymous reflection is now in the reminder circle."
+          : "Your reflection is now in the reminder circle.",
+      );
       setPostText("");
     } catch (publishError) {
       setError(
@@ -373,133 +476,165 @@ export function ViaQuranApp() {
     }
   }
 
-  async function handleCopyCurrent() {
-    if (!result) {
-      setError("Generate guidance first, then copy it.");
-      return;
-    }
-
-    try {
-      await copyText(buildShareText(result));
-      setShareMessage("Reminder copied to clipboard.");
-    } catch {
-      setError("Clipboard access is not available in this browser.");
-    }
+  function toggleStep(step: string) {
+    setCompletedSteps((current) =>
+      current.includes(step) ? current.filter((item) => item !== step) : [...current, step],
+    );
   }
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top,#ffffff_0%,#f7f3ea_42%,#efe7d9_100%)] text-[#18211b]">
-      <header className="sticky top-0 z-20 border-b border-[#e6ded0] bg-[rgba(252,249,243,0.92)] backdrop-blur">
-        <div className="mx-auto flex w-full max-w-[1320px] items-center justify-between gap-6 px-4 py-4 md:px-8">
+    <main className="min-h-screen bg-[linear-gradient(180deg,#fbf8f1_0%,#f1eadb_100%)] text-[#18211b]">
+      <header className="sticky top-0 z-20 border-b border-[#e6decf] bg-[rgba(251,248,241,0.92)] backdrop-blur">
+        <div className="mx-auto flex w-full max-w-[1280px] items-center justify-between gap-6 px-4 py-4 md:px-8">
           <a href="#top" className="flex items-center gap-3">
             <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl border border-[#e2d8c7] bg-white">
               <img src="/logo_viaquran.png" alt="ViaQuran logo" className="h-full w-full object-contain p-1" />
             </div>
             <div>
               <div className="text-[1.7rem] font-semibold leading-none text-[#1f6a4d]">ViaQuran</div>
-              <div className="mt-1 text-sm text-[#5a645d]">Learn, teach, and share with the Quran.</div>
+              <div className="mt-1 text-sm text-[#5a645d]">Life matching, reminder circles, and Quran-guided action.</div>
             </div>
           </a>
 
-          <nav className="hidden items-center gap-8 text-[1rem] text-[#2c352f] lg:flex">
-            <NavLink href="#reflect">Reflect</NavLink>
-            <NavLink href="#learn">Learn</NavLink>
-            <NavLink href="#teach">Teach</NavLink>
-            <NavLink href="#community">Share</NavLink>
-            <NavLink href="#library">Library</NavLink>
+          <nav className="hidden items-center gap-7 text-[0.98rem] text-[#2d352f] lg:flex">
+            <a href="#matcher" className="transition hover:text-[#1f6a4d]">Matcher</a>
+            <a href="#purpose" className="transition hover:text-[#1f6a4d]">Purpose</a>
+            <a href="#circle" className="transition hover:text-[#1f6a4d]">Reminder Circle</a>
+            <a href="#community" className="transition hover:text-[#1f6a4d]">Community</a>
+            <a href="#growth" className="transition hover:text-[#1f6a4d]">Growth</a>
           </nav>
 
-          <StatusBadge storageMode={storageMode} />
+          <div className="hidden rounded-full border border-[#d9dfd0] bg-white/85 px-4 py-2 text-sm font-semibold text-[#47634f] md:block">
+            Non-profit initiative
+          </div>
         </div>
       </header>
 
-      <div id="top" className="mx-auto flex w-full max-w-[1320px] flex-col gap-12 px-4 py-6 md:px-8 md:py-8">
-        <section className="overflow-hidden rounded-[36px] border border-[#e4dbce] bg-[linear-gradient(135deg,#fdfaf4_0%,#f7efdf_45%,#ebf3ea_100%)] shadow-[0_28px_70px_rgba(63,55,41,0.08)]">
-          <div className="grid gap-8 px-6 py-8 md:px-10 md:py-10 xl:grid-cols-[1.05fr_0.95fr]">
+      <div id="top" className="mx-auto flex w-full max-w-[1280px] flex-col gap-8 px-4 py-6 md:px-8 md:py-8">
+        <section className="overflow-hidden rounded-[36px] border border-[#e2d8c9] bg-[radial-gradient(circle_at_top_left,#ffffff_0%,#f8f1e2_46%,#ecf2e9_100%)] shadow-[0_30px_70px_rgba(73,60,41,0.09)]">
+          <div className="grid gap-8 px-6 py-8 md:px-10 md:py-10 xl:grid-cols-[1.1fr_0.9fr]">
             <div className="flex flex-col justify-center">
-              <div className="inline-flex w-fit rounded-full border border-[#d9dfd0] bg-white/80 px-4 py-2 text-sm font-semibold text-[#47634f]">
-                Full platform for reflection, teaching circles, and community sharing
+              <div className="inline-flex w-fit rounded-full border border-[#d7e0d7] bg-white/80 px-4 py-2 text-sm font-semibold text-[#47634f]">
+                Match your life and living with Allah&apos;s message
               </div>
-              <h1 className="mt-6 max-w-[620px] font-serif text-[2.9rem] leading-[1.04] text-[#17211b] md:text-[4.7rem]">
-                Build a Quran-centered learning habit that can also be taught to others.
+              <h1 className="mt-6 max-w-[680px] font-serif text-[3rem] leading-[1.02] text-[#17211b] md:text-[4.8rem]">
+                Learn to connect everyday living with what Allah actually says in the Quran.
               </h1>
-              <p className="mt-5 max-w-[560px] text-[1.08rem] leading-8 text-[#56625a]">
-                ViaQuran now combines personal guidance, lesson tracks, teaching resources, and a
-                community wall so one reflection can grow into a study habit, a halaqah, or a shared reminder.
+              <p className="mt-5 max-w-[610px] text-[1.06rem] leading-8 text-[#55625a]">
+                Many people pray, work, speak, struggle, parent, and make decisions as routine. ViaQuran helps them pause,
+                ask where Allah speaks about these matters, and move from habit into conscious obedience, understanding, and growth.
               </p>
+
               <div className="mt-8 flex flex-wrap gap-4">
                 <a
-                  href="#reflect"
-                  className="inline-flex items-center gap-3 rounded-2xl bg-[#1f6a4d] px-7 py-4 text-base font-semibold text-white shadow-[0_18px_30px_rgba(31,106,77,0.2)]"
+                  href="#matcher"
+                  className="inline-flex items-center gap-3 rounded-2xl bg-[#1f6a4d] px-7 py-4 text-base font-semibold text-white shadow-[0_18px_30px_rgba(31,106,77,0.18)]"
                 >
                   <CompassIcon className="h-5 w-5" />
-                  Start Reflecting
+                  Match My Routine
                 </a>
                 <a
-                  href="#teach"
+                  href="#community"
                   className="inline-flex items-center gap-3 rounded-2xl border border-[#8eb29f] bg-white/85 px-7 py-4 text-base font-semibold text-[#1f6a4d]"
                 >
-                  <CommunityIcon className="h-5 w-5" />
-                  Open Teaching Studio
+                  <CircleIcon className="h-5 w-5" />
+                  Enter Reminder Circle
                 </a>
               </div>
 
               <div className="mt-8 grid gap-4 sm:grid-cols-3">
-                <MetricCard label="Learning tracks" value={`${LEARNING_PATHS.length}`} />
-                <MetricCard label="Teaching circles" value={`${TEACHING_CIRCLES.length}`} />
-                <MetricCard label="Community posts" value={`${communityPosts.length}`} />
+                <MetricCard label="Alignment pulse" value={`${alignmentPulse}%`} help="A simple indicator showing whether reflection is becoming part of your real routine." />
+                <MetricCard label="Private library" value={`${savedItems.length}`} help="Keep ayah-backed reminders for revision, mentoring, and personal discipline." />
+                <MetricCard label="Circle activity" value={`${communityPosts.length}`} help="Questions, anonymous reflections, and short reminders shared with the community." />
               </div>
             </div>
 
-            <div className="grid gap-5 lg:grid-cols-[1.08fr_0.92fr]">
-              <div className="overflow-hidden rounded-[30px] border border-[#d8ccb7] bg-[#f4ebdb] p-3 shadow-[0_22px_42px_rgba(76,63,40,0.12)]">
+            <div className="grid gap-5">
+              <div className="overflow-hidden rounded-[30px] border border-[#dccfb8] bg-[#f4ebdb] p-3 shadow-[0_22px_42px_rgba(76,63,40,0.12)]">
                 <img
                   src="/header.png"
-                  alt="ViaQuran hero artwork"
-                  className="h-full min-h-[430px] w-full rounded-[24px] object-cover"
+                  alt="ViaQuran community and reflection illustration"
+                  className="h-[320px] w-full rounded-[24px] object-cover"
                 />
               </div>
-              <div className="flex flex-col gap-5">
-                <div className="rounded-[28px] border border-[#e1d8c8] bg-white/92 p-6 shadow-[0_16px_28px_rgba(68,57,40,0.08)]">
-                  <div className="text-sm font-semibold uppercase tracking-[0.18em] text-[#728075]">
-                    Daily challenge
-                  </div>
-                  <div className="mt-3 font-serif text-[1.9rem] leading-tight text-[#1a251d]">
-                    {dailyGuidance?.challengeTitle ?? "Build one Quran habit"}
-                  </div>
-                  <p className="mt-3 text-[1rem] leading-7 text-[#5a655d]">
-                    {dailyGuidance?.challengePrompt ??
-                      "Come back daily for one new Quran-linked action."}
-                  </p>
-                  <div className="mt-4 rounded-2xl bg-[#f7f4ed] px-4 py-3 text-sm font-semibold text-[#1f6a4d]">
-                    {dailyGuidance?.dateLabel ?? "Today"} • {dailyGuidance?.ayahReference ?? guidanceTheme.ayah.reference}
-                  </div>
-                </div>
 
-                <div className="rounded-[28px] border border-[#dae5da] bg-[linear-gradient(180deg,#f6fbf5_0%,#ecf4ec_100%)] p-6">
-                  <div className="text-sm font-semibold uppercase tracking-[0.18em] text-[#708176]">
-                    Platform status
-                  </div>
-                  <div className="mt-3 text-[1.6rem] font-semibold text-[#163126]">
-                    {storageMode === "mysql" ? "Production data layer is active." : "Safe local persistence is active."}
-                  </div>
-                  <p className="mt-3 text-[0.98rem] leading-7 text-[#516158]">
-                    {storageMode === "mysql"
-                      ? "Reflections, saved items, and community posts are using MariaDB."
-                      : "The app will still function without DB credentials and can be promoted to MariaDB later without changing the UI."}
-                  </p>
+              <div className="rounded-[30px] border border-[#e1d8c8] bg-white/92 p-6 shadow-[0_16px_28px_rgba(68,57,40,0.08)]">
+                <div className="text-sm font-semibold uppercase tracking-[0.18em] text-[#728075]">Why this matters</div>
+                <div className="mt-3 font-serif text-[1.9rem] leading-tight text-[#1a251d]">
+                  Worship becomes stronger when people know Allah&apos;s instruction, not just the routine.
+                </div>
+                <p className="mt-3 text-[1rem] leading-7 text-[#5a655d]">
+                  Example: many people pray every day because it is familiar. But when they discover where the Quran speaks
+                  about prayer, remembrance, humility, and obedience, salah is no longer only routine. It becomes a conscious
+                  response to Allah&apos;s command.
+                </p>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <Pill>{dailyGuidance?.ayahReference ?? guidanceTheme.ayah.reference}</Pill>
+                  <Pill>{themeLabel(guidanceTheme.id)}</Pill>
+                  <Pill>{dailyGuidance?.dateLabel ?? "Today"}</Pill>
                 </div>
               </div>
             </div>
           </div>
         </section>
 
-        <section id="reflect" className="grid gap-6 xl:grid-cols-[1.08fr_0.92fr]">
+        <section id="purpose" className="grid gap-6 xl:grid-cols-[0.98fr_1.02fr]">
+          <div className="rounded-[34px] border border-[#e5ddcf] bg-white p-6 shadow-[0_18px_35px_rgba(79,68,48,0.05)] md:p-8">
+            <SectionTitle
+              eyebrow="Purpose"
+              title="A clear purpose for users: relate ordinary life back to Quranic guidance"
+              text="This platform exists to help people stop treating faith as a disconnected subject. Daily routines, prayer, honesty, anger, gratitude, family life, and responsibilities should all be understood in the light of Quran."
+            />
+
+            <div className="mt-6 grid gap-4">
+              <StoryCard
+                title="From routine to obedience"
+                text="A person may pray every day, but still never ask where Allah teaches about prayer, remembrance, and humility. Once the Quranic basis becomes visible, prayer becomes more conscious and sincere."
+              />
+              <StoryCard
+                title="From confusion to guidance"
+                text="When a user posts a real-life struggle, the platform helps connect that struggle with an ayah, a translation, and a practical path forward."
+              />
+              <StoryCard
+                title="From isolation to community"
+                text="Reminder circles and anonymous posts give people a safe way to ask, reflect, and learn together without shame."
+              />
+            </div>
+          </div>
+
+          <div className="rounded-[34px] border border-[#e5ddcf] bg-[linear-gradient(180deg,#f6faf5_0%,#eef3eb_100%)] p-6 shadow-[0_18px_35px_rgba(79,68,48,0.05)] md:p-8">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <div className="text-sm font-semibold uppercase tracking-[0.16em] text-[#6e7a72]">How users should think about this app</div>
+                <div className="mt-2 font-serif text-[2rem] leading-tight text-[#193125]">Bring one part of life, find one ayah, act on one next step.</div>
+              </div>
+              <SparkIcon className="h-10 w-10 text-[#1f6a4d]" />
+            </div>
+            <div className="mt-5 grid gap-3">
+              {[
+                "Describe a routine, habit, worry, or question honestly.",
+                "Read the ayah and translation carefully, not only the answer summary.",
+                "Understand what obedience looks like in this situation.",
+                "Choose one action step and practice it in daily life.",
+                "Share it privately, anonymously, or in the reminder circle.",
+              ].map((step, index) => (
+                <div key={step} className="rounded-[18px] bg-white/85 px-4 py-3 text-sm leading-7 text-[#334038]">
+                  <span className="mr-2 font-semibold text-[#1f6a4d]">Step {index + 1}.</span>
+                  {step}
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <HighlightGallery />
+
+        <section id="matcher" className="grid gap-6 xl:grid-cols-[1.06fr_0.94fr]">
           <div className="rounded-[34px] border border-[#e5ddd0] bg-[linear-gradient(180deg,#faf7ef_0%,#f4ecdd_100%)] p-6 shadow-[0_20px_40px_rgba(79,68,48,0.06)] md:p-8">
-            <SectionHeader
-              eyebrow="Reflect"
-              title="Search for guidance and turn it into a practical next step"
-              text="Write what happened, what you are feeling, or what you want to teach. The app maps it to a Quranic theme, brings an ayah, and keeps the reflection in your growth record."
+            <SectionTitle
+              eyebrow="Life Matcher"
+              title="Post a routine, feeling, question, or personal conflict and match it with Quranic guidance"
+              text="This is the core exercise. Write what happened in your real life. The app reads the pattern, attaches it to a theme, and responds with ayah-backed improvement steps."
             />
 
             <form onSubmit={handleSubmit} className="mt-7">
@@ -509,88 +644,121 @@ export function ViaQuranApp() {
                   <textarea
                     value={input}
                     onChange={(event) => setInput(event.target.value)}
-                    placeholder="Example: I want to teach a short lesson on patience, and I also feel stressed about work."
-                    className="min-h-[132px] w-full resize-none border-0 bg-transparent text-base leading-7 text-[#202824] outline-none placeholder:text-[#8b8d86]"
+                    placeholder="Example: I waste too much time, I delay salah, and I want my daily routine to reflect Allah's guidance more honestly."
+                    className="min-h-[170px] w-full resize-none border-0 bg-transparent text-base leading-7 text-[#202824] outline-none placeholder:text-[#8b8d86]"
                   />
                 </div>
-                <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#ece6da] px-5 py-4">
+                <div className="border-t border-[#ece6da] px-5 py-4">
                   <div className="flex flex-wrap gap-2">
                     {EXAMPLE_INPUTS.map((example) => (
                       <button
                         key={example}
                         type="button"
                         onClick={() => setInput(example)}
-                        className="rounded-full border border-[#ddd9cc] bg-[#fbfaf6] px-4 py-2 text-sm text-[#4c564f]"
+                        className="rounded-full border border-[#ddd7cb] bg-[#faf8f3] px-3 py-2 text-sm text-[#4f5b53] transition hover:border-[#1f6a4d] hover:text-[#1f6a4d]"
                       >
                         {example}
                       </button>
                     ))}
                   </div>
-                  <button
-                    type="submit"
-                    disabled={isReflecting}
-                    className="inline-flex items-center gap-2 rounded-2xl bg-[#1f6a4d] px-6 py-3 text-base font-semibold text-white disabled:opacity-65"
-                  >
-                    <SparkIcon className="h-5 w-5" />
-                    {isReflecting ? "Generating..." : "Generate Guidance"}
-                  </button>
+                </div>
+              </div>
+
+              <div className="mt-5 flex flex-wrap items-center gap-3">
+                <button
+                  type="submit"
+                  disabled={isReflecting}
+                  className="inline-flex items-center gap-2 rounded-2xl bg-[#1f6a4d] px-6 py-3 text-base font-semibold text-white disabled:opacity-65"
+                >
+                  <SparkIcon className="h-5 w-5" />
+                  {isReflecting ? "Matching..." : "Match With Quran Guidance"}
+                </button>
+                <div className="text-sm leading-6 text-[#617068]">
+                  Best used for routines, habits, family tensions, work stress, or questions you want the community to refine.
                 </div>
               </div>
             </form>
 
             {(error || saveMessage || shareMessage) && (
-              <div className="mt-4 grid gap-3">
-                {error ? (
-                  <div className="rounded-[18px] border border-[#efc5c5] bg-[#fff1f1] px-4 py-3 text-sm text-[#9a3e3e]">
-                    {error}
-                  </div>
-                ) : null}
-                {saveMessage ? (
-                  <div className="rounded-[18px] border border-[#cfe4d6] bg-[#f2fbf5] px-4 py-3 text-sm text-[#216245]">
-                    {saveMessage}
-                  </div>
-                ) : null}
-                {shareMessage ? (
-                  <div className="rounded-[18px] border border-[#d6e5ef] bg-[#f2f9ff] px-4 py-3 text-sm text-[#245c87]">
-                    {shareMessage}
-                  </div>
-                ) : null}
+              <div className="mt-5 grid gap-3">
+                {error ? <div className="rounded-2xl border border-[#e7c6c6] bg-[#fff5f5] px-4 py-3 text-sm text-[#8b3c3c]">{error}</div> : null}
+                {saveMessage ? <div className="rounded-2xl border border-[#cae0cf] bg-[#f3fbf5] px-4 py-3 text-sm text-[#1f6a4d]">{saveMessage}</div> : null}
+                {shareMessage ? <div className="rounded-2xl border border-[#cae0cf] bg-[#f3fbf5] px-4 py-3 text-sm text-[#1f6a4d]">{shareMessage}</div> : null}
               </div>
             )}
           </div>
 
-          <div className="rounded-[34px] border border-[#e4ddcf] bg-white p-6 shadow-[0_18px_35px_rgba(79,68,48,0.05)] md:p-8">
-            <div className={`inline-flex rounded-full bg-gradient-to-r px-4 py-2 text-sm font-semibold text-white ${guidanceTheme.accentClass}`}>
-              {guidanceTheme.label}
+          <div id="circle" className="rounded-[34px] border border-[#e2dacb] bg-white p-6 shadow-[0_20px_40px_rgba(79,68,48,0.06)] md:p-8">
+            <SectionTitle
+              eyebrow="Reminder Circle"
+              title="Turn the match into a guided reminder, a discussion prompt, or an anonymous community post"
+              text="Every response can stay private, go into your library, or be sent into the circle for others to react to, learn from, and eventually verify."
+            />
+
+            <div className="mt-7 rounded-[24px] border border-[#e6e0d4] bg-[linear-gradient(180deg,#fbfaf7_0%,#f3efe6_100%)] p-5">
+              <div className="text-sm font-semibold uppercase tracking-[0.15em] text-[#6f7b73]">Detected focus</div>
+              <div className="mt-3 font-serif text-[2rem] text-[#1d241f]">{themeLabel(guidanceTheme.id)}</div>
+              <p className="mt-3 text-[0.98rem] leading-7 text-[#59645d]">{activeExplanation}</p>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <Pill>{ayah.reference}</Pill>
+                <Pill>Private, saveable, and shareable</Pill>
+              </div>
             </div>
-            <h3 className="mt-5 font-serif text-[2.3rem] leading-tight text-[#18211b]">
-              {guidanceTheme.label} guidance
-            </h3>
-            <p className="mt-4 text-[1.04rem] leading-8 text-[#303731]">
-              {result?.explanation ?? guidanceTheme.explanation}
+
+            <ToggleRow
+              checked={postAnonymously}
+              onChange={setPostAnonymously}
+              label="Post anonymously"
+              help="Use this for honest routines, sensitive questions, or confessions you want the reminder circle to answer without exposing your name."
+            />
+
+            <div className="mt-5 rounded-[24px] border border-[#dfe8dd] bg-[#fbfcfa] p-5">
+              <div className="text-sm font-semibold uppercase tracking-[0.15em] text-[#718077]">Interactive exercise</div>
+              <div className="mt-4 grid gap-3">
+                {activeSteps.map((step) => {
+                  const done = completedSteps.includes(step);
+                  return (
+                    <button
+                      key={step}
+                      type="button"
+                      onClick={() => toggleStep(step)}
+                      className={`flex items-start gap-3 rounded-[18px] px-4 py-4 text-left text-sm leading-7 transition ${
+                        done
+                          ? "border border-[#cde2d1] bg-[#eef8f0] text-[#234430]"
+                          : "border border-[#ebe6db] bg-white text-[#3d463f]"
+                      }`}
+                    >
+                      <span
+                        className={`mt-1 flex h-5 w-5 items-center justify-center rounded-full border text-xs font-semibold ${
+                          done ? "border-[#1f6a4d] bg-[#1f6a4d] text-white" : "border-[#c7d0c5] text-[#6d786f]"
+                        }`}
+                      >
+                        {done ? "x" : ""}
+                      </span>
+                      <span>{step}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="grid gap-6 xl:grid-cols-[1fr_1fr]">
+          <QuranMatchCard
+            ayah={ayah}
+            title="Matched ayah and translation"
+            eyebrow="Quran section"
+            explanation={activeExplanation}
+            actionSteps={activeSteps}
+          />
+
+          <div className="rounded-[34px] border border-[#e5ddcf] bg-[linear-gradient(180deg,#f6faf5_0%,#eef3eb_100%)] p-6 shadow-[0_18px_35px_rgba(79,68,48,0.05)] md:p-8">
+            <div className="text-sm font-semibold uppercase tracking-[0.18em] text-[#6e7a72]">Use this result</div>
+            <h3 className="mt-4 font-serif text-[2rem] leading-tight text-[#1b241e]">Save it, share it, or turn it into a community question</h3>
+            <p className="mt-3 text-[0.98rem] leading-7 text-[#57645b]">
+              Every matched result can stay in your private library, be shared to the reminder circle, or be copied into mentoring and teaching spaces.
             </p>
-
-            <div className="mt-6 rounded-[28px] border border-[#e7dfd2] bg-[linear-gradient(180deg,#fffcf8_0%,#faf4ea_100%)] p-6">
-              <div className="text-sm font-semibold uppercase tracking-[0.18em] text-[#738076]">
-                Ayah for this theme
-              </div>
-              <p className="ayah-arabic mt-4 font-semibold text-[#1f4b39]">{ayah.arabic}</p>
-              <p className="mt-4 text-[1.05rem] leading-8 text-[#2d352f]">{ayah.english}</p>
-              <div className="mt-4 text-base font-semibold text-[#1f6a4d]">{ayah.reference}</div>
-            </div>
-
-            <div className="mt-6 rounded-[24px] border border-[#dfe8dd] bg-[#fbfcfa] px-5 py-5">
-              <div className="text-sm font-semibold uppercase tracking-[0.15em] text-[#718077]">
-                Action steps
-              </div>
-              <div className="mt-3 grid gap-3">
-                {(result?.actionSteps ?? guidanceTheme.actionSteps).map((step) => (
-                  <div key={step} className="rounded-[18px] bg-[#f5f7f2] px-4 py-3 text-sm leading-7 text-[#3d463f]">
-                    {step}
-                  </div>
-                ))}
-              </div>
-            </div>
 
             <div className="mt-6 flex flex-wrap gap-3">
               <button
@@ -609,11 +777,37 @@ export function ViaQuranApp() {
                 className="inline-flex items-center gap-2 rounded-2xl bg-[#1f6a4d] px-5 py-3 text-base font-semibold text-white disabled:opacity-65"
               >
                 <ShareIcon className="h-5 w-5" />
-                {isPublishing ? "Sharing..." : "Share to Community"}
+                {isPublishing ? "Sharing..." : "Share to Reminder Circle"}
               </button>
               <button
                 type="button"
-                onClick={handleCopyCurrent}
+                onClick={() => copyText(buildShareText(result ?? {
+                  input,
+                  theme: guidanceTheme,
+                  ayah,
+                  explanation: activeExplanation,
+                  actionSteps: activeSteps,
+                  dailyGuidance: dailyGuidance ?? {
+                    themeId: guidanceTheme.id,
+                    title: guidanceTheme.challengeTitle,
+                    prompt: guidanceTheme.challengePrompt,
+                    ayahReference: ayah.reference,
+                    challengeTitle: guidanceTheme.challengeTitle,
+                    challengePrompt: guidanceTheme.challengePrompt,
+                    dateLabel: "Today",
+                  },
+                  progress: progress ?? {
+                    totalXp: 0,
+                    level: 1,
+                    currentStreak: 0,
+                    longestStreak: 0,
+                    reflectionsCount: 0,
+                    xpToNextLevel: 100,
+                  },
+                  gainedXp: 0,
+                  recentEntries: recentEntries,
+                  storageMode,
+                })).then(() => setShareMessage("Reminder copied to clipboard.")).catch(() => setError("Clipboard access is not available in this browser."))}
                 className="inline-flex items-center gap-2 rounded-2xl border border-[#ddd7cb] bg-[#faf8f3] px-5 py-3 text-base font-semibold text-[#4d5a52]"
               >
                 <NoteIcon className="h-5 w-5" />
@@ -623,131 +817,32 @@ export function ViaQuranApp() {
           </div>
         </section>
 
-        <section id="learn" className="rounded-[34px] border border-[#e7dfd2] bg-white px-6 py-7 shadow-[0_20px_40px_rgba(79,68,48,0.05)] md:px-8 md:py-8">
-          <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
-            <SectionHeader
-              eyebrow="Learn"
-              title="Structured paths for learners who want more than one-off inspiration"
-              text="These tracks turn reflection into a repeatable curriculum, with lesson ideas that work for individuals, small groups, and community classes."
-            />
-            <div className="rounded-[24px] border border-[#dde8df] bg-[#f7fbf7] px-5 py-4 text-sm leading-7 text-[#496255]">
-              Start with the path that matches your present challenge, then reuse the same theme in journaling, teaching, or discussion circles.
-            </div>
-          </div>
-
-          <div className="mt-8 grid gap-5 xl:grid-cols-4">
-            {LEARNING_PATHS.map((path) => (
-              <article
-                key={path.id}
-                className="rounded-[28px] border border-[#ece4d6] bg-[linear-gradient(180deg,#fffdf9_0%,#f7f1e6_100%)] p-6 shadow-[0_12px_28px_rgba(79,68,48,0.04)]"
-              >
-                <div className={`inline-flex rounded-full bg-gradient-to-r px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-white ${THEMES[path.themeId].accentClass}`}>
-                  {themeLabel(path.themeId)}
-                </div>
-                <h3 className="mt-4 font-serif text-[1.7rem] leading-tight text-[#1c251f]">{path.title}</h3>
-                <p className="mt-3 text-[0.98rem] leading-7 text-[#5b665e]">{path.summary}</p>
-                <div className="mt-4 flex flex-wrap gap-2 text-sm text-[#617068]">
-                  <Pill>{path.level}</Pill>
-                  <Pill>{path.duration}</Pill>
-                </div>
-                <div className="mt-5 text-sm font-semibold text-[#1f6a4d]">Teacher: {path.teacher}</div>
-                <div className="mt-4 grid gap-2">
-                  {path.lessons.map((lesson) => (
-                    <div key={lesson} className="rounded-[16px] bg-white/80 px-4 py-3 text-sm leading-6 text-[#334038]">
-                      {lesson}
-                    </div>
-                  ))}
-                </div>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section id="teach" className="grid gap-6 xl:grid-cols-[1.08fr_0.92fr]">
-          <div className="rounded-[34px] border border-[#e4ddcf] bg-[linear-gradient(180deg,#f6faf5_0%,#eef3eb_100%)] p-6 shadow-[0_18px_35px_rgba(79,68,48,0.05)] md:p-8">
-            <SectionHeader
-              eyebrow="Teach"
-              title="Run circles, lessons, and discussions without starting from zero"
-              text="Teaching mode focuses on repeatable formats. Use the reflection engine to find the theme, then build a short halaqah, class opener, or family session around it."
-            />
-
-            <div className="mt-7 grid gap-4">
-              {TEACHING_CIRCLES.map((circle) => (
-                <article
-                  key={circle.id}
-                  className="rounded-[24px] border border-[#dce5dc] bg-white px-5 py-5 shadow-[0_10px_24px_rgba(79,68,48,0.04)]"
-                >
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                      <h3 className="font-serif text-[1.55rem] text-[#1b241e]">{circle.title}</h3>
-                      <p className="mt-2 text-[0.98rem] leading-7 text-[#57645b]">{circle.focus}</p>
-                    </div>
-                    <div className="rounded-full bg-[#edf6ef] px-3 py-2 text-sm font-semibold text-[#1f6a4d]">
-                      {circle.format}
-                    </div>
-                  </div>
-                  <div className="mt-4 flex flex-wrap gap-2 text-sm text-[#5e6b63]">
-                    <Pill>{circle.schedule}</Pill>
-                    <Pill>{circle.capacity}</Pill>
-                    <Pill>Host: {circle.host}</Pill>
-                  </div>
-                </article>
-              ))}
-            </div>
-          </div>
-
+        <section id="community" className="grid gap-6 xl:grid-cols-[0.94fr_1.06fr]">
           <div className="rounded-[34px] border border-[#e5ddcf] bg-white p-6 shadow-[0_18px_35px_rgba(79,68,48,0.05)] md:p-8">
-            <div className="text-sm font-semibold uppercase tracking-[0.18em] text-[#6e7a72]">
-              Teacher toolkit
-            </div>
-            <h3 className="mt-4 font-serif text-[2rem] leading-tight text-[#1b241e]">
-              Ready-made assets for teachers and community builders
-            </h3>
-            <div className="mt-6 grid gap-4">
-              {RESOURCE_KITS.map((kit) => (
-                <article key={kit.id} className="rounded-[22px] bg-[#faf7f1] px-5 py-5">
-                  <div className="text-sm font-semibold uppercase tracking-[0.14em] text-[#738076]">
-                    {kit.format}
-                  </div>
-                  <div className="mt-2 text-[1.3rem] font-semibold text-[#1f2a23]">{kit.title}</div>
-                  <p className="mt-2 text-[0.98rem] leading-7 text-[#58645c]">{kit.description}</p>
-                </article>
-              ))}
-            </div>
-
-            <div className="mt-6 rounded-[24px] border border-[#dee8e0] bg-[#f6fbf7] px-5 py-5">
-              <div className="text-sm font-semibold uppercase tracking-[0.14em] text-[#728075]">
-                Suggested workflow
-              </div>
-              <div className="mt-3 grid gap-3 text-sm leading-7 text-[#405046]">
-                <div className="rounded-[16px] bg-white px-4 py-3">1. Use the reflection tool to identify the theme.</div>
-                <div className="rounded-[16px] bg-white px-4 py-3">2. Pull one learning path and one resource kit around that theme.</div>
-                <div className="rounded-[16px] bg-white px-4 py-3">3. Publish your summary to the community wall so learners can revisit it.</div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section id="community" className="grid gap-6 xl:grid-cols-[0.88fr_1.12fr]">
-          <div className="rounded-[34px] border border-[#e5ddcf] bg-white p-6 shadow-[0_18px_35px_rgba(79,68,48,0.05)] md:p-8">
-            <SectionHeader
-              eyebrow="Share"
-              title="Publish a lesson, reminder, or takeaway to the community wall"
-              text="Use this space for short teaching notes, study-circle reminders, or reflections worth revisiting later."
+            <SectionTitle
+              eyebrow="Community Builder"
+              title="Build the reminder circle with questions, routines, and anonymous honesty"
+              text="This wall is designed for community building. Members can post a struggle, ask for ayah-backed direction, and return later to refine it into stronger guidance."
             />
 
             <form onSubmit={handlePublishNote} className="mt-7 grid gap-4">
               <input
                 value={postTitle}
                 onChange={(event) => setPostTitle(event.target.value)}
-                placeholder="Title"
+                placeholder="Title for your reflection or question"
                 className="rounded-[20px] border border-[#ddd8cc] bg-[#fcfbf7] px-4 py-4 text-base text-[#1f2a23] outline-none"
               />
               <textarea
                 value={postText}
                 onChange={(event) => setPostText(event.target.value)}
-                placeholder="Write a short note for learners, teachers, or your community."
-                className="min-h-[180px] rounded-[24px] border border-[#ddd8cc] bg-[#fcfbf7] px-4 py-4 text-base leading-7 text-[#1f2a23] outline-none"
+                placeholder="Example: My routine looks disciplined outside, but inside I am losing honesty and focus. What ayah should I build my week around?"
+                className="min-h-[220px] rounded-[24px] border border-[#ddd8cc] bg-[#fcfbf7] px-4 py-4 text-base leading-7 text-[#1f2a23] outline-none"
+              />
+              <ToggleRow
+                checked={postAnonymously}
+                onChange={setPostAnonymously}
+                label="Publish this anonymously"
+                help="Useful for community questions, confessions, routines, and sensitive improvement areas."
               />
               <button
                 type="submit"
@@ -755,30 +850,16 @@ export function ViaQuranApp() {
                 className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#1f6a4d] px-6 py-3 text-base font-semibold text-white disabled:opacity-65"
               >
                 <ShareIcon className="h-5 w-5" />
-                {isPublishing ? "Publishing..." : "Publish Note"}
+                {isPublishing ? "Publishing..." : "Publish to Reminder Circle"}
               </button>
             </form>
-
-            <div className="mt-8 grid gap-4">
-              {COMMUNITY_SPOTLIGHTS.map((spotlight) => (
-                <article key={spotlight.id} className="rounded-[22px] border border-[#ece4d6] bg-[#faf8f3] px-5 py-5">
-                  <div className="text-sm font-semibold uppercase tracking-[0.14em] text-[#738076]">
-                    {spotlight.audience}
-                  </div>
-                  <div className="mt-2 text-[1.2rem] font-semibold text-[#1e2922]">{spotlight.title}</div>
-                  <p className="mt-2 text-[0.98rem] leading-7 text-[#5a655d]">{spotlight.excerpt}</p>
-                </article>
-              ))}
-            </div>
           </div>
 
           <div className="rounded-[34px] border border-[#e5ddcf] bg-[linear-gradient(180deg,#fdfcf9_0%,#f8f4ed_100%)] p-6 shadow-[0_18px_35px_rgba(79,68,48,0.05)] md:p-8">
             <div className="flex items-center justify-between gap-4">
               <div>
-                <div className="text-sm font-semibold uppercase tracking-[0.18em] text-[#6e7a72]">
-                  Community wall
-                </div>
-                <div className="mt-2 font-serif text-[2rem] text-[#1c251f]">Recent shared reminders</div>
+                <div className="text-sm font-semibold uppercase tracking-[0.18em] text-[#6e7a72]">Reminder circle</div>
+                <div className="mt-2 font-serif text-[2rem] text-[#1c251f]">Recent life matches and community prompts</div>
               </div>
               <div className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-[#1f6a4d]">
                 {communityPosts.length} posts
@@ -788,7 +869,7 @@ export function ViaQuranApp() {
             <div className="mt-6 grid gap-4">
               {communityPosts.length === 0 ? (
                 <div className="rounded-[24px] border border-dashed border-[#d9d4c7] bg-white px-5 py-8 text-[#617068]">
-                  The wall is empty for now. Publish the first reminder from this workspace.
+                  The reminder circle is empty for now. Publish the first reflection, question, or anonymous routine match.
                 </div>
               ) : (
                 communityPosts.map((post) => (
@@ -814,13 +895,18 @@ export function ViaQuranApp() {
           </div>
         </section>
 
-        <section id="library" className="grid gap-6 xl:grid-cols-[0.85fr_1.15fr]">
+        <section id="growth" className="grid gap-6 xl:grid-cols-[0.86fr_1.14fr]">
           <div className="rounded-[34px] border border-[#e5ddcf] bg-white p-6 shadow-[0_18px_35px_rgba(79,68,48,0.05)] md:p-8">
-            <div className="text-sm font-semibold uppercase tracking-[0.18em] text-[#6e7a72]">Your growth</div>
-            <div className="mt-5 grid gap-4 md:grid-cols-3">
-              <MetricCard label="XP points" value={`${progress?.totalXp ?? 0}`} subtle />
-              <MetricCard label="Level" value={`${progress?.level ?? 1}`} subtle />
-              <MetricCard label="Streak" value={`${progress?.currentStreak ?? 0}`} subtle />
+            <SectionTitle
+              eyebrow="Growth"
+              title="Track your direction, not just your activity"
+              text="This panel shows whether your practice is staying consistent, whether your reflection habit is growing, and what should be improved next."
+            />
+
+            <div className="mt-6 grid gap-4 md:grid-cols-3">
+              <MetricCard label="Alignment pulse" value={`${alignmentPulse}%`} help="A practical score based on streak, level, and reflection activity." />
+              <MetricCard label="Level" value={`${progress?.level ?? 1}`} help="Growth level from continued reflection and applied action." />
+              <MetricCard label="Streak" value={`${progress?.currentStreak ?? 0}`} help="Consecutive days of Quran-linked reflection." />
             </div>
 
             <div className="mt-6 rounded-[24px] border border-[#e6e0d4] bg-[linear-gradient(180deg,#fbfaf7_0%,#f8f5ee_100%)] px-5 py-5">
@@ -828,7 +914,7 @@ export function ViaQuranApp() {
               <div className="mt-4 grid gap-3">
                 {recentEntries.length === 0 ? (
                   <div className="rounded-[18px] border border-dashed border-[#ddd6c8] px-4 py-4 text-sm text-[#647067]">
-                    Your reflections will appear here after the first guidance request.
+                    Your routine matches will appear here after the first guidance request.
                   </div>
                 ) : (
                   recentEntries.map((entry) => (
@@ -837,6 +923,11 @@ export function ViaQuranApp() {
                         <div>
                           <div className="font-semibold text-[#1f6a4d]">{themeLabel(entry.themeId)}</div>
                           <p className="mt-2 text-sm leading-7 text-[#2b342f]">{entry.input}</p>
+                          {entry.ayahReference ? (
+                            <div className="mt-3 inline-flex rounded-full bg-[#edf6ef] px-3 py-2 text-xs font-semibold text-[#1f6a4d]">
+                              {entry.ayahReference}
+                            </div>
+                          ) : null}
                         </div>
                         <div className="rounded-full bg-[#f3f8f5] px-3 py-2 text-sm font-semibold text-[#1f6a4d]">
                           +{entry.xpGained} XP
@@ -852,10 +943,8 @@ export function ViaQuranApp() {
           <div className="rounded-[34px] border border-[#e5ddcf] bg-[linear-gradient(180deg,#f7f4ec_0%,#f2eee6_100%)] p-6 shadow-[0_18px_35px_rgba(79,68,48,0.05)] md:p-8">
             <div className="flex items-center justify-between gap-4">
               <div>
-                <div className="text-sm font-semibold uppercase tracking-[0.18em] text-[#6e7a72]">
-                  Saved library
-                </div>
-                <div className="mt-2 font-serif text-[2rem] text-[#1d241f]">Reflections worth teaching again</div>
+                <div className="text-sm font-semibold uppercase tracking-[0.18em] text-[#6e7a72]">Reminder library</div>
+                <div className="mt-2 font-serif text-[2rem] text-[#1d241f]">Saved guidance for mentoring, revisiting, and teaching</div>
               </div>
               <div className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-[#1f6a4d]">
                 {savedItems.length} saved
@@ -865,7 +954,7 @@ export function ViaQuranApp() {
             <div className="mt-6 grid gap-4 md:grid-cols-2">
               {savedItems.length === 0 ? (
                 <div className="rounded-[24px] border border-dashed border-[#d9d4c7] bg-white px-5 py-8 text-[#617068] md:col-span-2">
-                  Save a reflection to build your reusable lesson and reminder library.
+                  Save a matched reflection to build your private improvement archive.
                 </div>
               ) : (
                 savedItems.map((item) => (
@@ -885,37 +974,18 @@ export function ViaQuranApp() {
             </div>
           </div>
         </section>
+
+        <footer className="rounded-[30px] border border-[#e3dbc9] bg-[linear-gradient(180deg,#fdfbf6_0%,#f4eee2_100%)] px-6 py-6 text-center shadow-[0_14px_30px_rgba(79,68,48,0.04)] md:px-8">
+          <div className="font-serif text-[1.5rem] text-[#1b241e]">ViaQuran</div>
+          <p className="mt-3 text-[0.98rem] leading-7 text-[#58645c]">
+            A non-profit effort to help people relate their daily lives, routines, worship, and decisions to the Quran with clarity, reflection, and community support.
+          </p>
+          <p className="mt-4 text-sm text-[#67736b]">
+            Powered by SoftThinkers • <a href="https://www.softthinkers.com" className="font-semibold text-[#1f6a4d] hover:underline">www.softthinkers.com</a>
+          </p>
+        </footer>
       </div>
     </main>
-  );
-}
-
-function MetricCard({
-  label,
-  value,
-  subtle = false,
-}: {
-  label: string;
-  value: string;
-  subtle?: boolean;
-}) {
-  return (
-    <div
-      className={`rounded-[24px] px-5 py-5 ${
-        subtle ? "bg-[#faf7f1]" : "border border-[#e5ddcf] bg-white/88"
-      }`}
-    >
-      <div className="text-sm text-[#6e7a72]">{label}</div>
-      <div className="mt-2 text-4xl font-semibold text-[#1f6a4d]">{value}</div>
-    </div>
-  );
-}
-
-function Pill({ children }: { children: ReactNode }) {
-  return (
-    <div className="rounded-full border border-[#ddd7cb] bg-white px-3 py-2 text-sm font-medium text-[#5b665e]">
-      {children}
-    </div>
   );
 }
 
@@ -976,13 +1046,11 @@ function CompassIcon(props: IconProps) {
   );
 }
 
-function CommunityIcon(props: IconProps) {
+function CircleIcon(props: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" {...props}>
-      <path d="M16 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2" />
-      <circle cx="9.5" cy="7" r="4" />
-      <path d="M20 21v-2a4 4 0 0 0-3-3.87" />
-      <path d="M14 3.13a4 4 0 0 1 0 7.75" />
+      <path d="M12 3a9 9 0 1 0 9 9" />
+      <path d="M12 7v5l3 3" />
     </svg>
   );
 }

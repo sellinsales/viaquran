@@ -35,6 +35,7 @@ export interface ReflectionEntry {
   id: string;
   input: string;
   themeId: ThemeId;
+  ayahReference: string | null;
   createdAt: string;
   xpGained: number;
 }

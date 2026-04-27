@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS reflections (
   user_id BIGINT UNSIGNED NOT NULL,
   input_text TEXT NOT NULL,
   theme_id VARCHAR(32) NOT NULL,
+  ayah_reference VARCHAR(32) NULL,
   xp_gained INT NOT NULL DEFAULT 0,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT fk_reflections_user

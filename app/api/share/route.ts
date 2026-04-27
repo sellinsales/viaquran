@@ -11,12 +11,14 @@ export async function POST(request: Request) {
           userId?: string;
           title?: string;
           excerpt?: string;
+          anonymous?: boolean;
         }
       | null;
 
     const userId = body?.userId?.trim() || "guest-demo";
     const title = body?.title?.trim() ?? "";
     const excerpt = body?.excerpt?.trim() ?? "";
+    const anonymous = Boolean(body?.anonymous);
 
     if (!title || !excerpt) {
       return NextResponse.json({ error: "A title and message are required to share." }, { status: 400 });
@@ -27,6 +29,7 @@ export async function POST(request: Request) {
       title,
       excerpt,
       themeId: theme.id,
+      anonymous,
     });
 
     return NextResponse.json(shared);

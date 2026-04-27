@@ -23,7 +23,7 @@ export async function POST(request: Request) {
 
     const theme = detectTheme(input);
     const ayah = await getAyahForTheme(theme);
-    const stored = await recordReflection(userId, input, theme.id);
+    const stored = await recordReflection(userId, input, theme.id, ayah.reference);
 
     return NextResponse.json({
       input,
