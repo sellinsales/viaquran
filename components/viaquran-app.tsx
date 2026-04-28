@@ -1,13 +1,70 @@
 "use client";
 
 import { FormEvent, ReactNode, SVGProps, useEffect, useMemo, useState } from "react";
-import { QuranBrowser } from "@/components/quran-browser";
-import { QuranMatchCard } from "@/components/quran-match-card";
 import { EXAMPLE_INPUTS, THEMES } from "@/lib/theme-data";
 import { detectTheme } from "@/lib/theme-engine";
 import { DashboardPayload, ReflectionResult, ThemeId } from "@/lib/types";
 
 type IconProps = SVGProps<SVGSVGElement>;
+type RoutineFrequency = "Daily" | "Weekly" | "Monthly";
+
+interface RoutineItem {
+  id: string;
+  title: string;
+  time: string;
+  themeId: ThemeId;
+  intention: string;
+  description: string;
+  frequency: RoutineFrequency;
+}
+
+const ROUTINE_DECK: RoutineItem[] = [
+  {
+    id: "go-to-work",
+    title: "Go to Work",
+    time: "9:00 AM",
+    themeId: "honesty",
+    intention: "To earn halal income and support my family.",
+    description: "Treat work as obedience, honesty, and service.",
+    frequency: "Daily",
+  },
+  {
+    id: "study-learning",
+    title: "Study / Learning",
+    time: "11:00 AM",
+    themeId: "patience",
+    intention: "To seek beneficial knowledge for the sake of Allah.",
+    description: "Turn discipline and effort into worship.",
+    frequency: "Daily",
+  },
+  {
+    id: "exercise",
+    title: "Exercise",
+    time: "5:00 PM",
+    themeId: "trust",
+    intention: "To maintain health and strength for worship.",
+    description: "A strong body supports worship, service, and steadiness.",
+    frequency: "Daily",
+  },
+  {
+    id: "time-with-family",
+    title: "Time with Family",
+    time: "8:00 PM",
+    themeId: "anger",
+    intention: "To strengthen family bonds and bring mercy into the home.",
+    description: "Family time becomes worship when it carries patience and kindness.",
+    frequency: "Daily",
+  },
+  {
+    id: "sleep-rest",
+    title: "Sleep / Rest",
+    time: "10:30 PM",
+    themeId: "gratitude",
+    intention: "To rest as a blessing and recover for tomorrow's duties.",
+    description: "Even rest becomes gratitude when taken with balance.",
+    frequency: "Weekly",
+  },
+];
 
 function createGuestId() {
   if (typeof window === "undefined") {
@@ -33,12 +90,12 @@ function createGuestId() {
   }
 }
 
-function themeLabel(themeId: ThemeId) {
-  return THEMES[themeId].label;
-}
-
 function isErrorPayload(value: unknown): value is { error?: string } {
   return Boolean(value && typeof value === "object" && "error" in value);
+}
+
+function themeLabel(themeId: ThemeId) {
+  return THEMES[themeId].label;
 }
 
 function formatDate(value: string) {
@@ -48,14 +105,23 @@ function formatDate(value: string) {
   }).format(new Date(value));
 }
 
-function computeAlignmentPulse(progress?: DashboardPayload["progress"]) {
+function formatFullDate() {
+  return new Intl.DateTimeFormat("en", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  }).format(new Date());
+}
+
+function computeAlignment(progress?: DashboardPayload["progress"]) {
   if (!progress) {
-    return 42;
+    return 71;
   }
 
   return Math.min(
-    96,
-    28 + progress.level * 6 + progress.currentStreak * 5 + Math.min(progress.reflectionsCount, 12) * 3,
+    98,
+    34 + progress.level * 6 + progress.currentStreak * 4 + Math.min(progress.reflectionsCount, 10) * 3,
   );
 }
 
@@ -78,134 +144,267 @@ function buildShareText(result: ReflectionResult) {
   ].join("\n");
 }
 
-function SectionTitle({
-  eyebrow,
+function initialsFromUser(userId: string) {
+  return userId.replace("guest-", "").slice(0, 2).toUpperCase() || "AQ";
+}
+
+function joinClasses(...values: Array<string | false | null | undefined>) {
+  return values.filter(Boolean).join(" ");
+}
+
+function DashboardSection({
   title,
-  text,
+  subtitle,
+  actions,
+  children,
+  className,
 }: {
-  eyebrow: string;
   title: string;
-  text: string;
+  subtitle?: string;
+  actions?: ReactNode;
+  children: ReactNode;
+  className?: string;
 }) {
   return (
-    <div className="max-w-[760px]">
-      <div className="text-xs font-semibold uppercase tracking-[0.18em] text-[#6b776f]">{eyebrow}</div>
-      <h2 className="mt-3 font-serif text-[2rem] leading-tight text-[#16211b] md:text-[2.8rem]">{title}</h2>
-      <p className="mt-3 text-[1rem] leading-7 text-[#59645d]">{text}</p>
+    <section
+      className={joinClasses(
+        "rounded-[28px] border border-[#e6ddcf] bg-white/92 p-5 shadow-[0_18px_45px_rgba(53,49,36,0.06)] md:p-6",
+        className,
+      )}
+    >
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="font-serif text-[1.5rem] text-[#1d2a21] md:text-[1.8rem]">{title}</h2>
+          {subtitle ? <p className="mt-2 max-w-[54ch] text-sm leading-7 text-[#617168]">{subtitle}</p> : null}
+        </div>
+        {actions}
+      </div>
+      <div className="mt-5">{children}</div>
+    </section>
+  );
+}
+
+function SidebarItem({
+  active,
+  icon,
+  children,
+}: {
+  active?: boolean;
+  icon: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <div
+      className={joinClasses(
+        "flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition",
+        active ? "bg-[#256145] text-white shadow-[0_12px_30px_rgba(37,97,69,0.2)]" : "text-[#425148]",
+      )}
+    >
+      <span className={joinClasses("flex h-9 w-9 items-center justify-center rounded-xl", active ? "bg-white/12" : "bg-[#f3eee4] text-[#256145]")}>
+        {icon}
+      </span>
+      <span>{children}</span>
     </div>
   );
 }
 
-function MetricCard({
-  label,
+function StatCard({
+  icon,
   value,
+  label,
   help,
 }: {
-  label: string;
+  icon: ReactNode;
   value: string;
+  label: string;
   help: string;
 }) {
   return (
-    <div className="rounded-[26px] border border-[#e6dece] bg-white/90 p-5 shadow-[0_16px_30px_rgba(72,60,42,0.05)]">
-      <div className="text-sm uppercase tracking-[0.12em] text-[#718077]">{label}</div>
-      <div className="mt-2 text-4xl font-semibold text-[#1f6a4d]">{value}</div>
-      <div className="mt-2 text-sm leading-6 text-[#5c655f]">{help}</div>
+    <div className="rounded-[24px] border border-[#ece4d7] bg-[#fffdf9] p-4 shadow-[0_10px_25px_rgba(70,63,46,0.04)]">
+      <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#edf6f0] text-[#256145]">{icon}</div>
+      <div className="mt-5 text-[2rem] font-semibold leading-none text-[#17231c]">{value}</div>
+      <div className="mt-2 text-sm font-semibold text-[#2d3b33]">{label}</div>
+      <div className="mt-1 text-xs leading-6 text-[#728179]">{help}</div>
     </div>
   );
 }
 
 function Pill({ children }: { children: ReactNode }) {
   return (
-    <div className="rounded-full border border-[#ddd7cb] bg-white px-3 py-2 text-sm font-medium text-[#5b665e]">
+    <span className="rounded-full border border-[#ddd6c8] bg-white px-3 py-1.5 text-xs font-semibold text-[#5c6b62]">
       {children}
-    </div>
+    </span>
   );
 }
 
-function StoryCard({
+function ExampleChip({
+  value,
+  onClick,
+}: {
+  value: string;
+  onClick: (value: string) => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => onClick(value)}
+      className="rounded-full border border-[#ded6c7] bg-white px-3 py-2 text-sm text-[#4a5a50] transition hover:border-[#256145] hover:text-[#256145]"
+    >
+      {value}
+    </button>
+  );
+}
+
+function RoutineRow({
+  routine,
+  reference,
+  active,
+  done,
+  onSelect,
+}: {
+  routine: RoutineItem;
+  reference: string;
+  active: boolean;
+  done: boolean;
+  onSelect: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      className={joinClasses(
+        "grid w-full gap-4 rounded-[24px] border px-4 py-4 text-left transition md:grid-cols-[auto_1.2fr_1.25fr_auto]",
+        active ? "border-[#bfd6c4] bg-[#f5fbf7]" : "border-[#ece4d7] bg-white hover:border-[#d3c7b5]",
+      )}
+    >
+      <div className="flex items-center gap-3">
+        <span
+          className={joinClasses(
+            "flex h-10 w-10 items-center justify-center rounded-full border text-sm font-semibold",
+            done ? "border-[#256145] bg-[#256145] text-white" : "border-[#d6d1c4] text-[#77857d]",
+          )}
+        >
+          {done ? "x" : ""}
+        </span>
+        <div>
+          <div className="text-base font-semibold text-[#1f2c23]">{routine.title}</div>
+          <div className="text-sm text-[#6b7a72]">{routine.time}</div>
+        </div>
+      </div>
+      <div className="text-sm leading-6 text-[#506056]">
+        <span className="font-semibold text-[#2b3931]">Intention:</span> {routine.intention}
+      </div>
+      <div className="text-sm leading-6 text-[#506056]">{routine.description}</div>
+      <div className="justify-self-start md:justify-self-end">
+        <div className="rounded-full bg-[#edf6f0] px-3 py-2 text-sm font-semibold text-[#256145]">
+          {reference}
+        </div>
+      </div>
+    </button>
+  );
+}
+
+function ActionStep({
+  label,
+  completed,
+  onToggle,
+}: {
+  label: string;
+  completed: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      className={joinClasses(
+        "flex w-full items-start gap-3 rounded-[18px] border px-4 py-4 text-left text-sm leading-7 transition",
+        completed ? "border-[#cfe2d4] bg-[#eef8f0] text-[#244333]" : "border-[#e7e0d4] bg-white text-[#46554c]",
+      )}
+    >
+      <span
+        className={joinClasses(
+          "mt-1 flex h-5 w-5 items-center justify-center rounded-full border text-[11px] font-semibold",
+          completed ? "border-[#256145] bg-[#256145] text-white" : "border-[#c8d1c8] text-[#708177]",
+        )}
+      >
+        {completed ? "x" : ""}
+      </span>
+      <span>{label}</span>
+    </button>
+  );
+}
+
+function PhoneFrame({
   title,
-  text,
+  children,
+  activeTab,
 }: {
   title: string;
-  text: string;
+  children: ReactNode;
+  activeTab: "dashboard" | "routines" | "add" | "reflection" | "profile";
 }) {
-  return (
-    <div className="rounded-[24px] border border-[#e8e0d2] bg-white px-5 py-5 shadow-[0_12px_24px_rgba(73,60,41,0.04)]">
-      <div className="font-serif text-[1.4rem] leading-tight text-[#1c251f]">{title}</div>
-      <p className="mt-3 text-[0.98rem] leading-7 text-[#56625a]">{text}</p>
-    </div>
-  );
-}
-
-function HighlightGallery() {
-  const items = [
-    {
-      src: "/header.png",
-      alt: "Community learning and reflection",
-      title: "Daily life reflection",
-      text: "Turn routines, struggles, and choices into ayah-backed understanding.",
-    },
-    {
-      src: "/logo-.png",
-      alt: "Reminder circle and anonymous questions",
-      title: "Reminder circles",
-      text: "Share gentle reminders, ask anonymously, and build trust through reflection.",
-    },
-    {
-      src: "/logo_viaquran.png",
-      alt: "Quran guidance and personal growth",
-      title: "Step-by-step obedience",
-      text: "Move from habit to conscious obedience by seeing what Allah says and then acting on it.",
-    },
-  ];
+  const tabs = [
+    { id: "dashboard", label: "Dashboard" },
+    { id: "routines", label: "My Routines" },
+    { id: "add", label: "Add" },
+    { id: "reflection", label: "Reflections" },
+    { id: "profile", label: "Profile" },
+  ] as const;
 
   return (
-    <section className="rounded-[34px] border border-[#e5ddcf] bg-white p-6 shadow-[0_18px_35px_rgba(79,68,48,0.05)] md:p-8">
-      <SectionTitle
-        eyebrow="Highlights"
-        title="A short gallery of what this platform is built to encourage"
-        text="ViaQuran is designed to make Quranic guidance visible inside ordinary life, family routines, learning circles, and personal improvement."
-      />
-
-      <div className="mt-6 grid gap-5 md:grid-cols-3">
-        {items.map((item) => (
-          <article key={item.title} className="overflow-hidden rounded-[26px] border border-[#ebe2d5] bg-[#fbf8f2]">
-            <img src={item.src} alt={item.alt} className="h-48 w-full object-cover" />
-            <div className="px-5 py-5">
-              <div className="font-serif text-[1.35rem] leading-tight text-[#1c251f]">{item.title}</div>
-              <p className="mt-3 text-sm leading-7 text-[#5b665e]">{item.text}</p>
+    <article className="rounded-[34px] border border-[#ded6c8] bg-[#fffdfa] p-3 shadow-[0_24px_55px_rgba(57,49,39,0.08)]">
+      <div className="rounded-[28px] border border-[#ece3d6] bg-white p-4">
+        <div className="flex items-center justify-between text-[13px] font-semibold text-[#2c3831]">
+          <span>9:41</span>
+          <div className="flex items-center gap-1.5">
+            <span className="h-2 w-2 rounded-full bg-[#1d2a21]" />
+            <span className="h-2 w-2 rounded-full bg-[#1d2a21]" />
+            <span className="h-2 w-4 rounded-full border border-[#1d2a21]" />
+          </div>
+        </div>
+        <div className="mt-4 flex items-center justify-between">
+          <div className="text-lg font-semibold text-[#17231c]">{title}</div>
+          <button type="button" className="rounded-full p-2 text-[#516159]">
+            <DotsIcon className="h-4 w-4" />
+          </button>
+        </div>
+        <div className="mt-4 min-h-[430px]">{children}</div>
+        <div className="mt-5 grid grid-cols-5 gap-2 border-t border-[#efeadf] pt-3">
+          {tabs.map((tab) => (
+            <div key={tab.id} className="text-center">
+              <div
+                className={joinClasses(
+                  "mx-auto h-1.5 w-8 rounded-full",
+                  activeTab === tab.id ? "bg-[#256145]" : "bg-transparent",
+                )}
+              />
+              <div className={joinClasses("mt-2 text-[11px]", activeTab === tab.id ? "font-semibold text-[#256145]" : "text-[#7c8a82]")}>
+                {tab.label}
+              </div>
             </div>
-          </article>
-        ))}
+          ))}
+        </div>
       </div>
-    </section>
+    </article>
   );
 }
 
-function ToggleRow({
-  checked,
+function StarRating({
+  rating,
   onChange,
-  label,
-  help,
 }: {
-  checked: boolean;
-  onChange: (value: boolean) => void;
-  label: string;
-  help: string;
+  rating: number;
+  onChange: (value: number) => void;
 }) {
   return (
-    <label className="flex items-start gap-3 rounded-[18px] border border-[#dfd9cd] bg-[#faf7f1] px-4 py-4">
-      <input
-        type="checkbox"
-        checked={checked}
-        onChange={(event) => onChange(event.target.checked)}
-        className="mt-1 h-4 w-4 rounded border-[#c5ccbf] text-[#1f6a4d] focus:ring-[#1f6a4d]"
-      />
-      <div>
-        <div className="font-semibold text-[#1b241e]">{label}</div>
-        <div className="mt-1 text-sm leading-6 text-[#5f6962]">{help}</div>
-      </div>
-    </label>
+    <div className="flex gap-2">
+      {[1, 2, 3, 4, 5].map((value) => (
+        <button key={value} type="button" onClick={() => onChange(value)} className="text-[#d0b06f] transition hover:scale-105">
+          <StarIcon className={joinClasses("h-7 w-7", value <= rating ? "fill-current" : "fill-none")} />
+        </button>
+      ))}
+    </div>
   );
 }
 
@@ -217,13 +416,20 @@ export function ViaQuranApp() {
   const [error, setError] = useState("");
   const [saveMessage, setSaveMessage] = useState("");
   const [shareMessage, setShareMessage] = useState("");
-  const [postTitle, setPostTitle] = useState("A routine I want the community to review");
+  const [postTitle, setPostTitle] = useState("Need help connecting this routine to Quran guidance");
   const [postText, setPostText] = useState("");
   const [postAnonymously, setPostAnonymously] = useState(true);
+  const [completedSteps, setCompletedSteps] = useState<string[]>([]);
+  const [selectedRoutineId, setSelectedRoutineId] = useState(ROUTINE_DECK[0].id);
+  const [routineFrequency, setRoutineFrequency] = useState<RoutineFrequency>("Daily");
+  const [routineTitle, setRoutineTitle] = useState("");
+  const [routineTime, setRoutineTime] = useState("09:00");
+  const [routineConcept, setRoutineConcept] = useState("");
+  const [reflectionRating, setReflectionRating] = useState(4);
+  const [reflectionNote, setReflectionNote] = useState("Alhamdulillah, I want this routine to become obedience instead of habit.");
   const [isReflecting, setIsReflecting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
-  const [completedSteps, setCompletedSteps] = useState<string[]>([]);
 
   useEffect(() => {
     const nextUserId = createGuestId();
@@ -245,6 +451,51 @@ export function ViaQuranApp() {
       });
   }, []);
 
+  const liveTheme = useMemo(() => detectTheme(input || routineConcept || postText || "patience"), [input, postText, routineConcept]);
+  const guidanceTheme = result?.theme ?? liveTheme;
+  const progress = result?.progress ?? dashboard?.progress;
+  const dailyGuidance = result?.dailyGuidance ?? dashboard?.dailyGuidance;
+  const recentEntries = result?.recentEntries ?? dashboard?.recentEntries ?? [];
+  const savedItems = dashboard?.savedItems ?? [];
+  const communityPosts = dashboard?.communityPosts ?? [];
+  const alignment = computeAlignment(progress);
+  const quranReference = result?.ayah.reference ?? dailyGuidance?.ayahReference ?? guidanceTheme.ayah.reference;
+  const currentAyah = result?.ayah ?? guidanceTheme.ayah;
+  const activeSteps = result?.actionSteps ?? guidanceTheme.actionSteps;
+  const activeExplanation = result?.explanation ?? guidanceTheme.explanation;
+  const initials = initialsFromUser(userId);
+  const overviewCards = [
+    { label: "Tasks Today", value: `${ROUTINE_DECK.filter((item) => item.frequency === "Daily").length}`, help: "Three completed routines are enough to build momentum.", icon: <CheckIcon className="h-5 w-5" /> },
+    { label: "Good Deeds", value: `${Math.max(12, Math.round((progress?.totalXp ?? 96) / 8))}`, help: "Count the acts you intend for Allah, not only productivity.", icon: <StarIcon className="h-5 w-5" /> },
+    { label: "Quran Connections", value: `${Math.max(3, recentEntries.length || 3)}`, help: "Each matched routine becomes a Quran connection you can revisit.", icon: <BookIcon className="h-5 w-5" /> },
+    { label: "Day Streak", value: `${progress?.currentStreak ?? 7}`, help: "Consistency matters more than intensity.", icon: <FlameIcon className="h-5 w-5" /> },
+  ];
+
+  const activeRoutine = ROUTINE_DECK.find((item) => item.id === selectedRoutineId) ?? ROUTINE_DECK[0];
+  const filteredRoutines = ROUTINE_DECK.filter((item) => item.frequency === routineFrequency);
+  const suggestedCommunityCards =
+    communityPosts.length > 0
+      ? communityPosts.slice(0, 2).map((post) => ({
+          title: post.title,
+          themeId: post.themeId,
+          excerpt: post.excerpt,
+          badge: post.authorName,
+        }))
+      : [
+          {
+            title: "Help Others",
+            themeId: "honesty" as ThemeId,
+            excerpt: "Support a need and connect service with the Quran.",
+            badge: "2 Ayat",
+          },
+          {
+            title: "Travel",
+            themeId: "trust" as ThemeId,
+            excerpt: "Reflect on movement, risk, and tawakkul during journeys.",
+            badge: "3 Ayat",
+          },
+        ];
+
   useEffect(() => {
     if (!result) {
       return;
@@ -254,24 +505,14 @@ export function ViaQuranApp() {
     setPostText(
       `${result.explanation} My next step is: ${result.actionSteps[0] ?? "Take one practical Quran-linked action today."}`,
     );
+    const linkedRoutine = ROUTINE_DECK.find((item) => item.themeId === result.theme.id);
+    if (linkedRoutine) {
+      setSelectedRoutineId(linkedRoutine.id);
+    }
     setCompletedSteps([]);
   }, [result]);
 
-  const liveTheme = useMemo(() => detectTheme(input || postText || "patience"), [input, postText]);
-  const guidanceTheme = result?.theme ?? liveTheme;
-  const ayah = result?.ayah ?? guidanceTheme.ayah;
-  const progress = result?.progress ?? dashboard?.progress;
-  const dailyGuidance = result?.dailyGuidance ?? dashboard?.dailyGuidance;
-  const recentEntries = result?.recentEntries ?? dashboard?.recentEntries ?? [];
-  const savedItems = dashboard?.savedItems ?? [];
-  const communityPosts = dashboard?.communityPosts ?? [];
-  const storageMode = result?.storageMode ?? dashboard?.storageMode ?? "file";
-  const alignmentPulse = computeAlignmentPulse(progress);
-  const activeSteps = result?.actionSteps ?? guidanceTheme.actionSteps;
-  const activeExplanation = result?.explanation ?? guidanceTheme.explanation;
-
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function requestReflection(nextInput: string) {
     setError("");
     setSaveMessage("");
     setShareMessage("");
@@ -283,7 +524,7 @@ export function ViaQuranApp() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ input, userId }),
+        body: JSON.stringify({ input: nextInput, userId }),
       });
       const rawPayload = (await response.json().catch(() => null)) as unknown;
 
@@ -305,20 +546,31 @@ export function ViaQuranApp() {
         communityPosts: current?.communityPosts ?? [],
         storageMode: payload.storageMode,
       }));
+      return payload;
     } catch (submitError) {
       setError(
         submitError instanceof Error
           ? submitError.message
           : "Network error while generating guidance.",
       );
+      return null;
     } finally {
       setIsReflecting(false);
     }
   }
 
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!input.trim()) {
+      setError("Describe the routine, struggle, or question you want to match.");
+      return;
+    }
+    await requestReflection(input.trim());
+  }
+
   async function handleSaveCurrent() {
     if (!result) {
-      setError("Generate guidance first, then save it.");
+      setError("Generate Quran guidance first, then save the reflection.");
       return;
     }
 
@@ -354,6 +606,7 @@ export function ViaQuranApp() {
         savedItems?: DashboardPayload["savedItems"];
         storageMode?: "mysql" | "file";
       };
+
       setDashboard((current) => {
         if (!current) {
           return current;
@@ -365,7 +618,7 @@ export function ViaQuranApp() {
           storageMode: payload.storageMode ?? current.storageMode,
         };
       });
-      setSaveMessage("Saved to your private reminder library.");
+      setSaveMessage("Saved to your reminder vault.");
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : "Could not save this reflection.");
     } finally {
@@ -415,7 +668,7 @@ export function ViaQuranApp() {
 
   async function handleShareCurrent() {
     if (!result) {
-      setError("Generate guidance first, then share it.");
+      setError("Generate Quran guidance first, then share it.");
       return;
     }
 
@@ -425,8 +678,8 @@ export function ViaQuranApp() {
 
     try {
       await publishCommunityPost(`${result.theme.label} reminder`, result.explanation, postAnonymously);
-
       const shareText = buildShareText(result);
+
       if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
         await navigator.share({
           title: "ViaQuran reflection",
@@ -436,7 +689,7 @@ export function ViaQuranApp() {
         await copyText(shareText);
       }
 
-      setShareMessage("Shared to the reminder circle and prepared for external sharing.");
+      setShareMessage("Shared to the community and prepared for external sharing.");
     } catch (shareError) {
       setError(
         shareError instanceof Error ? shareError.message : "Could not share this reflection right now.",
@@ -459,14 +712,9 @@ export function ViaQuranApp() {
     }
 
     setIsPublishing(true);
-
     try {
       await publishCommunityPost(title, excerpt, postAnonymously);
-      setShareMessage(
-        postAnonymously
-          ? "Your anonymous reflection is now in the reminder circle."
-          : "Your reflection is now in the reminder circle.",
-      );
+      setShareMessage(postAnonymously ? "Your anonymous note is now in the community." : "Your note is now in the community.");
       setPostText("");
     } catch (publishError) {
       setError(
@@ -477,6 +725,20 @@ export function ViaQuranApp() {
     }
   }
 
+  async function handleAddRoutine(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const title = routineTitle.trim();
+    const concept = routineConcept.trim();
+    if (!title || !concept) {
+      setError("Add a routine title and the concept you want to relate to the Quran.");
+      return;
+    }
+
+    const nextInput = `${title}. Frequency: ${routineFrequency}. Time: ${routineTime}. Intention or concept: ${concept}`;
+    setInput(nextInput);
+    await requestReflection(nextInput);
+  }
+
   function toggleStep(step: string) {
     setCompletedSteps((current) =>
       current.includes(step) ? current.filter((item) => item !== step) : [...current, step],
@@ -484,493 +746,750 @@ export function ViaQuranApp() {
   }
 
   return (
-    <main className="min-h-screen bg-[linear-gradient(180deg,#fbf8f1_0%,#f1eadb_100%)] text-[#18211b]">
-      <header className="sticky top-0 z-20 border-b border-[#e6decf] bg-[rgba(251,248,241,0.92)] backdrop-blur">
-        <div className="mx-auto flex w-full max-w-[1280px] items-center justify-between gap-6 px-4 py-4 md:px-8">
-          <a href="#top" className="flex items-center gap-3">
-            <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl border border-[#e2d8c7] bg-white">
-              <img src="/logo_viaquran.png" alt="ViaQuran logo" className="h-full w-full object-contain p-1" />
-            </div>
-            <div>
-              <div className="text-[1.7rem] font-semibold leading-none text-[#1f6a4d]">ViaQuran</div>
-              <div className="mt-1 text-sm text-[#5a645d]">Life matching, reminder circles, and Quran-guided action.</div>
-            </div>
-          </a>
-
-          <nav className="hidden items-center gap-7 text-[0.98rem] text-[#2d352f] lg:flex">
-            <a href="#matcher" className="transition hover:text-[#1f6a4d]">Matcher</a>
-            <a href="#purpose" className="transition hover:text-[#1f6a4d]">Purpose</a>
-            <a href="#circle" className="transition hover:text-[#1f6a4d]">Reminder Circle</a>
-            <a href="#community" className="transition hover:text-[#1f6a4d]">Community</a>
-            <a href="#growth" className="transition hover:text-[#1f6a4d]">Growth</a>
-          </nav>
-
-          <div className="hidden rounded-full border border-[#d9dfd0] bg-white/85 px-4 py-2 text-sm font-semibold text-[#47634f] md:block">
-            Non-profit initiative
-          </div>
-        </div>
-      </header>
-
-      <div id="top" className="mx-auto flex w-full max-w-[1280px] flex-col gap-8 px-4 py-6 md:px-8 md:py-8">
-        <section className="overflow-hidden rounded-[36px] border border-[#ddd2c0] bg-[#1d2a21] shadow-[0_30px_70px_rgba(73,60,41,0.14)]">
-          <div
-            className="relative"
-            style={{
-              backgroundImage:
-                "linear-gradient(90deg, rgba(18,28,23,0.88) 0%, rgba(18,28,23,0.76) 42%, rgba(18,28,23,0.42) 100%), url('/header.png')",
-              backgroundSize: "cover",
-              backgroundPosition: "center",
-            }}
-          >
-            <div className="grid gap-8 px-6 py-8 md:px-10 md:py-12 xl:grid-cols-[1.12fr_0.88fr]">
-            <div className="flex flex-col justify-center">
-              <div className="inline-flex w-fit rounded-full border border-[rgba(255,255,255,0.18)] bg-[rgba(255,255,255,0.12)] px-4 py-2 text-sm font-semibold text-[#eef6f0]">
-                Match your life and living with Allah&apos;s message
+    <main className="min-h-screen bg-[radial-gradient(circle_at_top,#ffffff_0%,#faf6ef_42%,#f1ebdf_100%)] px-3 py-4 text-[#17231c] md:px-5 md:py-6">
+      <div className="mx-auto max-w-[1480px]">
+        <div className="grid gap-5 xl:grid-cols-[264px_minmax(0,1fr)]">
+          <aside className="hidden rounded-[32px] border border-[#e6dece] bg-[linear-gradient(180deg,#fffdf9_0%,#f6f0e5_100%)] p-5 shadow-[0_24px_60px_rgba(54,48,37,0.08)] xl:flex xl:min-h-[900px] xl:flex-col">
+            <div className="flex items-center gap-3">
+              <div className="flex h-16 w-16 items-center justify-center rounded-3xl border border-[#e6ddcd] bg-white">
+                <img src="/logo_viaquran.png" alt="ViaQuran logo" className="h-12 w-12 object-contain" />
               </div>
-              <h1 className="mt-6 max-w-[720px] font-serif text-[3rem] leading-[1.02] text-white md:text-[4.9rem]">
-                Learn to connect everyday living with what Allah actually says in the Quran.
-              </h1>
-              <p className="mt-5 max-w-[640px] text-[1.08rem] leading-8 text-[#edf1eb]">
-                Many people pray, work, speak, struggle, parent, and make decisions as routine. ViaQuran helps them pause,
-                ask where Allah speaks about these matters, and move from habit into conscious obedience, understanding, and growth.
+              <div>
+                <div className="font-serif text-[1.5rem] leading-none text-[#1f3027]">Quran Life</div>
+                <div className="mt-1 text-sm text-[#6d7c73]">Companion</div>
+              </div>
+            </div>
+
+            <div className="mt-8 grid gap-2">
+              <SidebarItem active icon={<HomeIcon className="h-5 w-5" />}>Dashboard</SidebarItem>
+              <SidebarItem icon={<RoutineIcon className="h-5 w-5" />}>My Routines</SidebarItem>
+              <SidebarItem icon={<PlusIcon className="h-5 w-5" />}>Add Routine</SidebarItem>
+              <SidebarItem icon={<BookIcon className="h-5 w-5" />}>Quran Connections</SidebarItem>
+              <SidebarItem icon={<StarIcon className="h-5 w-5" />}>Reflections</SidebarItem>
+              <SidebarItem icon={<BellIcon className="h-5 w-5" />}>Reminders</SidebarItem>
+              <SidebarItem icon={<CommunityIcon className="h-5 w-5" />}>Community</SidebarItem>
+              <SidebarItem icon={<ProfileIcon className="h-5 w-5" />}>Profile</SidebarItem>
+              <SidebarItem icon={<SettingsIcon className="h-5 w-5" />}>Settings</SidebarItem>
+            </div>
+
+            <div className="mt-auto overflow-hidden rounded-[28px] bg-[linear-gradient(180deg,rgba(37,97,69,0.08)_0%,rgba(37,97,69,0.02)_100%)] p-5">
+              <div className="text-sm font-semibold uppercase tracking-[0.15em] text-[#6c7a72]">Purpose</div>
+              <p className="mt-3 text-sm leading-7 text-[#53635a]">
+                People already live routines. ViaQuran helps them ask where Allah speaks about those routines so action turns into obedience.
               </p>
-
-              <div className="mt-8 flex flex-wrap gap-4">
-                <a
-                  href="#matcher"
-                  className="inline-flex items-center gap-3 rounded-2xl bg-[#1f6a4d] px-7 py-4 text-base font-semibold text-white shadow-[0_18px_30px_rgba(31,106,77,0.18)]"
-                >
-                  <CompassIcon className="h-5 w-5" />
-                  Match My Routine
-                </a>
-                <a
-                  href="#community"
-                  className="inline-flex items-center gap-3 rounded-2xl border border-[rgba(255,255,255,0.28)] bg-[rgba(255,255,255,0.12)] px-7 py-4 text-base font-semibold text-white"
-                >
-                  <CircleIcon className="h-5 w-5" />
-                  Enter Reminder Circle
-                </a>
-              </div>
-
-              <div className="mt-8 grid gap-4 sm:grid-cols-3">
-                <MetricCard label="Alignment pulse" value={`${alignmentPulse}%`} help="A simple indicator showing whether reflection is becoming part of your real routine." />
-                <MetricCard label="Private library" value={`${savedItems.length}`} help="Keep ayah-backed reminders for revision and personal discipline." />
-                <MetricCard label="Circle activity" value={`${communityPosts.length}`} help="Questions and anonymous reflections shared with the community." />
+              <div className="mt-5 rounded-2xl bg-white px-4 py-4 text-sm leading-7 text-[#48564d]">
+                “And say, do good, for Allah will see your deeds.”
               </div>
             </div>
+          </aside>
 
-            <div className="rounded-[30px] border border-[rgba(255,255,255,0.14)] bg-[rgba(255,255,255,0.12)] p-6 shadow-[0_16px_28px_rgba(18,28,23,0.18)] backdrop-blur">
-              <div className="text-sm font-semibold uppercase tracking-[0.18em] text-[#dcebdd]">Why this matters</div>
-              <div className="mt-3 font-serif text-[1.9rem] leading-tight text-white">
-                Worship becomes stronger when people know Allah&apos;s instruction, not just the routine.
-              </div>
-              <p className="mt-3 text-[1rem] leading-7 text-[#edf1eb]">
-                  Example: many people pray every day because it is familiar. But when they discover where the Quran speaks
-                  about prayer, remembrance, humility, and obedience, salah is no longer only routine. It becomes a conscious
-                  response to Allah&apos;s command.
-              </p>
-              <div className="mt-4 flex flex-wrap gap-2">
-                <Pill>{dailyGuidance?.ayahReference ?? guidanceTheme.ayah.reference}</Pill>
-                <Pill>{themeLabel(guidanceTheme.id)}</Pill>
-                <Pill>{dailyGuidance?.dateLabel ?? "Today"}</Pill>
-              </div>
-            </div>
-          </div>
-          </div>
-        </section>
-
-        <section id="purpose" className="rounded-[34px] border border-[#e5ddcf] bg-white p-6 shadow-[0_18px_35px_rgba(79,68,48,0.05)] md:p-8">
-          <SectionTitle
-            eyebrow="Purpose"
-            title="Bring one part of life, find one ayah, and act on one next step"
-            text="This platform exists to help people stop treating faith as a disconnected subject. Daily routines, prayer, honesty, anger, gratitude, family life, and responsibilities should all be understood in the light of Quran."
-          />
-
-          <div className="mt-6 grid gap-4 lg:grid-cols-3">
-            <StoryCard
-              title="From routine to obedience"
-              text="A person may pray every day, but still never ask where Allah teaches about prayer, remembrance, and humility. Once the Quranic basis becomes visible, prayer becomes more conscious and sincere."
-            />
-            <StoryCard
-              title="From confusion to guidance"
-              text="When a user posts a real-life struggle, the platform should connect that struggle with an ayah, a translation, and a practical path forward."
-            />
-            <StoryCard
-              title="From isolation to community"
-              text="Reminder circles and anonymous posts give people a safe way to ask, reflect, and learn together without shame."
-            />
-          </div>
-        </section>
-
-        <section id="matcher" className="grid gap-6 xl:grid-cols-[1.06fr_0.94fr]">
-          <div className="rounded-[34px] border border-[#e5ddd0] bg-[linear-gradient(180deg,#faf7ef_0%,#f4ecdd_100%)] p-6 shadow-[0_20px_40px_rgba(79,68,48,0.06)] md:p-8">
-            <SectionTitle
-              eyebrow="Life Matcher"
-              title="Type what is happening in your life and ask: what does the Quran say about this?"
-              text="This is the main action of the website. Write a routine, weakness, question, family concern, worship issue, or daily struggle. The app matches it to Quranic guidance, then shows the ayah, translation, and practical next steps."
-            />
-
-            <form onSubmit={handleSubmit} className="mt-7">
-              <div className="overflow-hidden rounded-[24px] border border-[#d7d4c9] bg-white shadow-[0_18px_35px_rgba(79,68,48,0.08)]">
-                <div className="flex items-start gap-4 px-5 py-5">
-                  <SearchIcon className="mt-1 h-6 w-6 shrink-0 text-[#25342b]" />
-                  <textarea
-                    value={input}
-                    onChange={(event) => setInput(event.target.value)}
-                    placeholder="Example: I waste too much time, I delay salah, and I want my daily routine to reflect Allah's guidance more honestly."
-                    className="min-h-[170px] w-full resize-none border-0 bg-transparent text-base leading-7 text-[#202824] outline-none placeholder:text-[#8b8d86]"
-                  />
+          <div className="grid gap-5">
+            <header className="rounded-[30px] border border-[#e6ddcf] bg-[linear-gradient(180deg,#fffefb_0%,#f7f2e8_100%)] px-5 py-5 shadow-[0_20px_55px_rgba(58,50,39,0.06)] md:px-6">
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div>
+                  <div className="text-sm font-semibold uppercase tracking-[0.15em] text-[#6d7c73]">Assalamu Alaikum</div>
+                  <h1 className="mt-2 font-serif text-[2rem] leading-tight text-[#17231c] md:text-[2.5rem]">
+                    Match your daily life with Allah&apos;s message.
+                  </h1>
+                  <p className="mt-2 max-w-[64ch] text-sm leading-7 text-[#617168] md:text-[0.98rem]">
+                    If you pray as routine, work as routine, parent as routine, or struggle as routine, this app helps you ask:
+                    what does the Quran say about this, and how do I obey Allah through it step by step?
+                  </p>
                 </div>
-                <div className="border-t border-[#ece6da] px-5 py-4">
-                  <div className="flex flex-wrap gap-2">
-                    {EXAMPLE_INPUTS.map((example) => (
-                      <button
-                        key={example}
-                        type="button"
-                        onClick={() => setInput(example)}
-                        className="rounded-full border border-[#ddd7cb] bg-[#faf8f3] px-3 py-2 text-sm text-[#4f5b53] transition hover:border-[#1f6a4d] hover:text-[#1f6a4d]"
-                      >
-                        {example}
-                      </button>
-                    ))}
+
+                <div className="flex items-center gap-3">
+                  <div className="text-right text-sm text-[#617168]">
+                    <div>{formatFullDate()}</div>
+                    <div className="mt-1 text-xs uppercase tracking-[0.12em] text-[#8a968f]">Non-profit by SoftThinkers</div>
+                  </div>
+                  <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#256145] text-base font-semibold text-white">
+                    {initials}
                   </div>
                 </div>
               </div>
-
-              <div className="mt-5 flex flex-wrap items-center gap-3">
-                <button
-                  type="submit"
-                  disabled={isReflecting}
-                  className="inline-flex items-center gap-2 rounded-2xl bg-[#1f6a4d] px-6 py-3 text-base font-semibold text-white disabled:opacity-65"
-                >
-                  <SparkIcon className="h-5 w-5" />
-                  {isReflecting ? "Matching..." : "Match With Quran Guidance"}
-                </button>
-                <div className="text-sm leading-6 text-[#617068]">
-                  Best used for routines, habits, prayer discipline, family tensions, work stress, or questions you want the community to refine.
-                </div>
-              </div>
-            </form>
+            </header>
 
             {(error || saveMessage || shareMessage) && (
-              <div className="mt-5 grid gap-3">
-                {error ? <div className="rounded-2xl border border-[#e7c6c6] bg-[#fff5f5] px-4 py-3 text-sm text-[#8b3c3c]">{error}</div> : null}
-                {saveMessage ? <div className="rounded-2xl border border-[#cae0cf] bg-[#f3fbf5] px-4 py-3 text-sm text-[#1f6a4d]">{saveMessage}</div> : null}
-                {shareMessage ? <div className="rounded-2xl border border-[#cae0cf] bg-[#f3fbf5] px-4 py-3 text-sm text-[#1f6a4d]">{shareMessage}</div> : null}
+              <div className="grid gap-3">
+                {error ? (
+                  <div className="rounded-[20px] border border-[#efc8c8] bg-[#fff5f5] px-4 py-3 text-sm text-[#8b3c3c]">
+                    {error}
+                  </div>
+                ) : null}
+                {saveMessage ? (
+                  <div className="rounded-[20px] border border-[#cae0cf] bg-[#f3fbf5] px-4 py-3 text-sm text-[#256145]">
+                    {saveMessage}
+                  </div>
+                ) : null}
+                {shareMessage ? (
+                  <div className="rounded-[20px] border border-[#cae0cf] bg-[#f3fbf5] px-4 py-3 text-sm text-[#256145]">
+                    {shareMessage}
+                  </div>
+                ) : null}
               </div>
             )}
-          </div>
 
-          <div id="circle" className="rounded-[34px] border border-[#e2dacb] bg-white p-6 shadow-[0_20px_40px_rgba(79,68,48,0.06)] md:p-8">
-            <SectionTitle
-              eyebrow="How to use the result"
-              title="Read the ayah, understand the meaning, then act on it step by step"
-              text="The purpose is not only to receive a result. The purpose is to understand the ayah, relate it to your life, and begin changing the next action you take."
-            />
+            <section className="grid gap-5 2xl:grid-cols-[minmax(0,1.2fr)_340px]">
+              <div className="grid gap-5">
+                <DashboardSection
+                  title="Today's Overview"
+                  subtitle="See your routines, your current alignment, and the Quran-linked moments that deserve attention today."
+                >
+                  <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                    {overviewCards.map((card) => (
+                      <StatCard
+                        key={card.label}
+                        icon={card.icon}
+                        value={card.value}
+                        label={card.label}
+                        help={card.help}
+                      />
+                    ))}
+                  </div>
+                </DashboardSection>
 
-            <div className="mt-7 rounded-[24px] border border-[#e6e0d4] bg-[linear-gradient(180deg,#fbfaf7_0%,#f3efe6_100%)] p-5">
-              <div className="text-sm font-semibold uppercase tracking-[0.15em] text-[#6f7b73]">Detected focus</div>
-              <div className="mt-3 font-serif text-[2rem] text-[#1d241f]">{themeLabel(guidanceTheme.id)}</div>
-              <p className="mt-3 text-[0.98rem] leading-7 text-[#59645d]">{activeExplanation}</p>
-              <div className="mt-4 flex flex-wrap gap-2">
-                <Pill>{ayah.reference}</Pill>
-                <Pill>Private, saveable, and shareable</Pill>
-              </div>
-            </div>
+                <DashboardSection
+                  title="What is happening in your life right now?"
+                  subtitle="Describe the routine, struggle, or question in ordinary language. ViaQuran will match it with ayah guidance, translation, and practical steps."
+                  actions={
+                    <div className="rounded-full bg-[#edf6f0] px-4 py-2 text-sm font-semibold text-[#256145]">
+                      Alignment {alignment}%
+                    </div>
+                  }
+                >
+                  <form onSubmit={handleSubmit} className="grid gap-4">
+                    <textarea
+                      value={input}
+                      onChange={(event) => setInput(event.target.value)}
+                      placeholder="Example: I say my prayers, but often without understanding where Allah speaks about consistency, humility, or obedience in salah."
+                      className="min-h-[160px] rounded-[24px] border border-[#ded6c8] bg-[#fffdf9] px-5 py-4 text-base leading-8 text-[#1e2b23] outline-none transition focus:border-[#256145]"
+                    />
 
-            <ToggleRow
-              checked={postAnonymously}
-              onChange={setPostAnonymously}
-              label="Post anonymously"
-              help="Use this for honest routines, sensitive questions, or confessions you want the reminder circle to answer without exposing your name."
-            />
+                    <div className="flex flex-wrap gap-2">
+                      {EXAMPLE_INPUTS.map((item) => (
+                        <ExampleChip key={item} value={item} onClick={setInput} />
+                      ))}
+                    </div>
 
-            <div className="mt-5 rounded-[24px] border border-[#dfe8dd] bg-[#fbfcfa] p-5">
-              <div className="text-sm font-semibold uppercase tracking-[0.15em] text-[#718077]">Interactive exercise</div>
-              <div className="mt-4 grid gap-3">
-                {activeSteps.map((step) => {
-                  const done = completedSteps.includes(step);
-                  return (
-                    <button
-                      key={step}
-                      type="button"
-                      onClick={() => toggleStep(step)}
-                      className={`flex items-start gap-3 rounded-[18px] px-4 py-4 text-left text-sm leading-7 transition ${
-                        done
-                          ? "border border-[#cde2d1] bg-[#eef8f0] text-[#234430]"
-                          : "border border-[#ebe6db] bg-white text-[#3d463f]"
-                      }`}
-                    >
-                      <span
-                        className={`mt-1 flex h-5 w-5 items-center justify-center rounded-full border text-xs font-semibold ${
-                          done ? "border-[#1f6a4d] bg-[#1f6a4d] text-white" : "border-[#c7d0c5] text-[#6d786f]"
-                        }`}
+                    <div className="flex flex-wrap items-center gap-3">
+                      <button
+                        type="submit"
+                        disabled={isReflecting}
+                        className="inline-flex items-center gap-3 rounded-2xl bg-[#256145] px-5 py-3 text-base font-semibold text-white shadow-[0_18px_34px_rgba(37,97,69,0.18)] disabled:opacity-65"
                       >
-                        {done ? "x" : ""}
-                      </span>
-                      <span>{step}</span>
+                        <SparkIcon className="h-5 w-5" />
+                        {isReflecting ? "Matching..." : "Match With Quran Guidance"}
+                      </button>
+                      <label className="inline-flex items-center gap-3 rounded-2xl border border-[#ddd7cb] bg-[#faf7f1] px-4 py-3 text-sm text-[#526158]">
+                        <input
+                          type="checkbox"
+                          checked={postAnonymously}
+                          onChange={(event) => setPostAnonymously(event.target.checked)}
+                          className="h-4 w-4 rounded border-[#c7d0c5] text-[#256145]"
+                        />
+                        Allow anonymous community sharing
+                      </label>
+                    </div>
+                  </form>
+                </DashboardSection>
+
+                <DashboardSection
+                  title="Today's Routines"
+                  subtitle="Every routine can carry an intention, a Quran connection, and one clear next step."
+                  actions={<a href="#mobile-journey" className="text-sm font-semibold text-[#256145]">View mobile flow</a>}
+                >
+                  <div className="grid gap-3">
+                    {ROUTINE_DECK.filter((item) => item.frequency === "Daily").map((routine) => (
+                      <RoutineRow
+                        key={routine.id}
+                        routine={routine}
+                        reference={routine.themeId === guidanceTheme.id ? quranReference : THEMES[routine.themeId].ayah.reference}
+                        active={routine.id === activeRoutine.id}
+                        done={completedSteps.length > 0 && routine.id === activeRoutine.id}
+                        onSelect={() => setSelectedRoutineId(routine.id)}
+                      />
+                    ))}
+                  </div>
+                </DashboardSection>
+              </div>
+
+              <div className="grid gap-5">
+                <DashboardSection
+                  title="Daily Insight"
+                  subtitle="The aim is not only to complete a task. The aim is to see where Allah speaks about it so the action becomes worship."
+                  className="bg-[linear-gradient(180deg,#fffefb_0%,#f5efe3_100%)]"
+                >
+                  <div className="rounded-[24px] border border-[#e7dece] bg-white px-5 py-5">
+                    {result?.ayah.arabic ? (
+                      <div className="text-right font-serif text-[1.7rem] leading-[2] text-[#1c281f]">{result.ayah.arabic}</div>
+                    ) : (
+                      <div className="rounded-[20px] border border-dashed border-[#d7d0c3] bg-[#faf7f1] px-4 py-5 text-sm leading-7 text-[#647169]">
+                        Submit a real routine or concern above to load the matched ayah, translation, and steps from the Quran API.
+                      </div>
+                    )}
+
+                    <p className="mt-4 text-sm leading-7 text-[#415047]">{currentAyah.english}</p>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <Pill>{quranReference}</Pill>
+                      <Pill>{themeLabel(guidanceTheme.id)}</Pill>
+                    </div>
+                  </div>
+
+                  <div className="mt-5 overflow-hidden rounded-[24px] border border-[#e8dece] bg-[linear-gradient(180deg,#fbf7ef_0%,#f3ecdf_100%)] p-5">
+                    <img src="/header.png" alt="Quran reflection illustration" className="h-44 w-full rounded-[18px] object-cover" />
+                    <div className="mt-4 text-sm leading-7 text-[#526058]">
+                      Prayer, work, study, family, and hardship should not remain empty habits. They should become acts shaped by Allah&apos;s words.
+                    </div>
+                  </div>
+                </DashboardSection>
+
+                <DashboardSection
+                  title="Task Detail"
+                  subtitle={`${activeRoutine.title} at ${activeRoutine.time}`}
+                  className="bg-[linear-gradient(180deg,#f7fbf8_0%,#eef4ef_100%)]"
+                >
+                  <div className="rounded-[24px] bg-[#256145] px-5 py-5 text-white shadow-[0_18px_34px_rgba(37,97,69,0.18)]">
+                    <div className="text-sm uppercase tracking-[0.12em] text-white/70">Intention (Niyyah)</div>
+                    <div className="mt-3 text-lg font-semibold">{activeRoutine.intention}</div>
+                    <p className="mt-3 text-sm leading-7 text-white/86">{activeRoutine.description}</p>
+                  </div>
+
+                  <div className="mt-5 rounded-[24px] border border-[#dbe7dd] bg-white px-5 py-5">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div className="text-sm font-semibold uppercase tracking-[0.14em] text-[#6f7c73]">Quran Connection</div>
+                      <div className="text-sm font-semibold text-[#256145]">{quranReference}</div>
+                    </div>
+                    {currentAyah.arabic ? (
+                      <div className="mt-4 text-right font-serif text-[1.65rem] leading-[2] text-[#1d291f]">{currentAyah.arabic}</div>
+                    ) : null}
+                    <p className="mt-4 text-sm leading-7 text-[#334139]">{currentAyah.english}</p>
+                    {currentAyah.urdu ? <p className="mt-3 text-sm leading-7 text-[#53625a]">{currentAyah.urdu}</p> : null}
+                  </div>
+
+                  <div className="mt-5 grid gap-3">
+                    {activeSteps.map((step) => (
+                      <ActionStep
+                        key={step}
+                        label={step}
+                        completed={completedSteps.includes(step)}
+                        onToggle={() => toggleStep(step)}
+                      />
+                    ))}
+                  </div>
+
+                  <div className="mt-5 flex flex-wrap gap-3">
+                    <button
+                      type="button"
+                      onClick={handleSaveCurrent}
+                      disabled={isSaving}
+                      className="inline-flex items-center gap-2 rounded-2xl border border-[#96b4a3] bg-white px-4 py-3 text-sm font-semibold text-[#256145] disabled:opacity-65"
+                    >
+                      <BookmarkIcon className="h-5 w-5" />
+                      {isSaving ? "Saving..." : "Save Reflection"}
                     </button>
-                  );
-                })}
+                    <button
+                      type="button"
+                      onClick={handleShareCurrent}
+                      disabled={isPublishing}
+                      className="inline-flex items-center gap-2 rounded-2xl bg-[#256145] px-4 py-3 text-sm font-semibold text-white disabled:opacity-65"
+                    >
+                      <ShareIcon className="h-5 w-5" />
+                      {isPublishing ? "Sharing..." : "Share It"}
+                    </button>
+                  </div>
+                </DashboardSection>
               </div>
-            </div>
-          </div>
-        </section>
+            </section>
 
-        <HighlightGallery />
-
-        <section className="grid gap-6 xl:grid-cols-[1fr_1fr]">
-          <QuranMatchCard
-            ayah={ayah}
-            title="Matched ayah and translation"
-            eyebrow="Quran section"
-            explanation={activeExplanation}
-            actionSteps={activeSteps}
-          />
-
-          <div className="rounded-[34px] border border-[#e5ddcf] bg-[linear-gradient(180deg,#f6faf5_0%,#eef3eb_100%)] p-6 shadow-[0_18px_35px_rgba(79,68,48,0.05)] md:p-8">
-            <div className="text-sm font-semibold uppercase tracking-[0.18em] text-[#6e7a72]">Use this result</div>
-            <h3 className="mt-4 font-serif text-[2rem] leading-tight text-[#1b241e]">Save it, share it, or turn it into a community question</h3>
-            <p className="mt-3 text-[0.98rem] leading-7 text-[#57645b]">
-              Every matched result can stay in your private library, be shared to the reminder circle, or be copied into mentoring and teaching spaces.
-            </p>
-
-            <div className="mt-6 flex flex-wrap gap-3">
-              <button
-                type="button"
-                onClick={handleSaveCurrent}
-                disabled={isSaving}
-                className="inline-flex items-center gap-2 rounded-2xl border border-[#9ab6a6] bg-white px-5 py-3 text-base font-semibold text-[#1f6a4d] disabled:opacity-65"
+            <section className="grid gap-5 xl:grid-cols-[1.04fr_0.96fr]">
+              <DashboardSection
+                title="Community"
+                subtitle="Users can ask publicly or anonymously. The goal is to build a reminder circle where routines become discussion, ayah verification, and practical improvement."
               >
-                <BookmarkIcon className="h-5 w-5" />
-                {isSaving ? "Saving..." : "Save Reflection"}
-              </button>
-              <button
-                type="button"
-                onClick={handleShareCurrent}
-                disabled={isPublishing}
-                className="inline-flex items-center gap-2 rounded-2xl bg-[#1f6a4d] px-5 py-3 text-base font-semibold text-white disabled:opacity-65"
-              >
-                <ShareIcon className="h-5 w-5" />
-                {isPublishing ? "Sharing..." : "Share to Reminder Circle"}
-              </button>
-              <button
-                type="button"
-                onClick={() => copyText(buildShareText(result ?? {
-                  input,
-                  theme: guidanceTheme,
-                  ayah,
-                  explanation: activeExplanation,
-                  actionSteps: activeSteps,
-                  dailyGuidance: dailyGuidance ?? {
-                    themeId: guidanceTheme.id,
-                    title: guidanceTheme.challengeTitle,
-                    prompt: guidanceTheme.challengePrompt,
-                    ayahReference: ayah.reference,
-                    challengeTitle: guidanceTheme.challengeTitle,
-                    challengePrompt: guidanceTheme.challengePrompt,
-                    dateLabel: "Today",
-                  },
-                  progress: progress ?? {
-                    totalXp: 0,
-                    level: 1,
-                    currentStreak: 0,
-                    longestStreak: 0,
-                    reflectionsCount: 0,
-                    xpToNextLevel: 100,
-                  },
-                  gainedXp: 0,
-                  recentEntries: recentEntries,
-                  storageMode,
-                })).then(() => setShareMessage("Reminder copied to clipboard.")).catch(() => setError("Clipboard access is not available in this browser."))}
-                className="inline-flex items-center gap-2 rounded-2xl border border-[#ddd7cb] bg-[#faf8f3] px-5 py-3 text-base font-semibold text-[#4d5a52]"
-              >
-                <NoteIcon className="h-5 w-5" />
-                Copy Reminder
-              </button>
-            </div>
-          </div>
-        </section>
+                <form onSubmit={handlePublishNote} className="grid gap-4">
+                  <input
+                    value={postTitle}
+                    onChange={(event) => setPostTitle(event.target.value)}
+                    placeholder="Title for your routine, concern, or anonymous question"
+                    className="rounded-[20px] border border-[#ddd7cb] bg-[#fffdf9] px-4 py-4 text-sm text-[#1e2b23] outline-none"
+                  />
+                  <textarea
+                    value={postText}
+                    onChange={(event) => setPostText(event.target.value)}
+                    placeholder="Example: I pray regularly, but my heart is not present. Which ayah should shape my week so salah becomes obedience and not empty repetition?"
+                    className="min-h-[180px] rounded-[24px] border border-[#ddd7cb] bg-[#fffdf9] px-4 py-4 text-sm leading-7 text-[#1e2b23] outline-none"
+                  />
+                  <label className="inline-flex items-center gap-3 rounded-[18px] border border-[#e2dbc9] bg-[#faf6ee] px-4 py-3 text-sm text-[#4f5d55]">
+                    <input
+                      type="checkbox"
+                      checked={postAnonymously}
+                      onChange={(event) => setPostAnonymously(event.target.checked)}
+                      className="h-4 w-4 rounded border-[#c7d0c5] text-[#256145]"
+                    />
+                    Publish this anonymously
+                  </label>
+                  <button
+                    type="submit"
+                    disabled={isPublishing}
+                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#256145] px-5 py-3 text-sm font-semibold text-white disabled:opacity-65"
+                  >
+                    <CommunityIcon className="h-5 w-5" />
+                    {isPublishing ? "Publishing..." : "Publish to Community"}
+                  </button>
+                </form>
 
-        <QuranBrowser />
-
-        <section id="community" className="grid gap-6 xl:grid-cols-[0.94fr_1.06fr]">
-          <div className="rounded-[34px] border border-[#e5ddcf] bg-white p-6 shadow-[0_18px_35px_rgba(79,68,48,0.05)] md:p-8">
-            <SectionTitle
-              eyebrow="Community Builder"
-              title="Build the reminder circle with questions, routines, and anonymous honesty"
-              text="This wall is designed for community building. Members can post a struggle, ask for ayah-backed direction, and return later to refine it into stronger guidance."
-            />
-
-            <form onSubmit={handlePublishNote} className="mt-7 grid gap-4">
-              <input
-                value={postTitle}
-                onChange={(event) => setPostTitle(event.target.value)}
-                placeholder="Title for your reflection or question"
-                className="rounded-[20px] border border-[#ddd8cc] bg-[#fcfbf7] px-4 py-4 text-base text-[#1f2a23] outline-none"
-              />
-              <textarea
-                value={postText}
-                onChange={(event) => setPostText(event.target.value)}
-                placeholder="Example: My routine looks disciplined outside, but inside I am losing honesty and focus. What ayah should I build my week around?"
-                className="min-h-[220px] rounded-[24px] border border-[#ddd8cc] bg-[#fcfbf7] px-4 py-4 text-base leading-7 text-[#1f2a23] outline-none"
-              />
-              <ToggleRow
-                checked={postAnonymously}
-                onChange={setPostAnonymously}
-                label="Publish this anonymously"
-                help="Useful for community questions, confessions, routines, and sensitive improvement areas."
-              />
-              <button
-                type="submit"
-                disabled={isPublishing}
-                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#1f6a4d] px-6 py-3 text-base font-semibold text-white disabled:opacity-65"
-              >
-                <ShareIcon className="h-5 w-5" />
-                {isPublishing ? "Publishing..." : "Publish to Reminder Circle"}
-              </button>
-            </form>
-          </div>
-
-          <div className="rounded-[34px] border border-[#e5ddcf] bg-[linear-gradient(180deg,#fdfcf9_0%,#f8f4ed_100%)] p-6 shadow-[0_18px_35px_rgba(79,68,48,0.05)] md:p-8">
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <div className="text-sm font-semibold uppercase tracking-[0.18em] text-[#6e7a72]">Reminder circle</div>
-                <div className="mt-2 font-serif text-[2rem] text-[#1c251f]">Recent life matches and community prompts</div>
-              </div>
-              <div className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-[#1f6a4d]">
-                {communityPosts.length} posts
-              </div>
-            </div>
-
-            <div className="mt-6 grid gap-4">
-              {communityPosts.length === 0 ? (
-                <div className="rounded-[24px] border border-dashed border-[#d9d4c7] bg-white px-5 py-8 text-[#617068]">
-                  The reminder circle is empty for now. Publish the first reflection, question, or anonymous routine match.
-                </div>
-              ) : (
-                communityPosts.map((post) => (
-                  <article key={post.id} className="rounded-[24px] border border-[#ebdfcb] bg-white px-5 py-5">
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div>
-                        <div className="text-sm font-semibold uppercase tracking-[0.12em] text-[#6f7b73]">
+                <div className="mt-6 grid gap-4">
+                  {(communityPosts.length ? communityPosts : []).slice(0, 3).map((post) => (
+                    <article key={post.id} className="rounded-[24px] border border-[#ece3d5] bg-[#fffdfa] px-5 py-5">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div className="text-sm font-semibold uppercase tracking-[0.12em] text-[#6e7a72]">
                           {themeLabel(post.themeId)}
                         </div>
-                        <h3 className="mt-2 text-[1.35rem] font-semibold text-[#1e2922]">{post.title}</h3>
+                        <div className="text-xs text-[#7b8881]">{formatDate(post.createdAt)}</div>
                       </div>
-                      <div className="text-sm text-[#6a746d]">{formatDate(post.createdAt)}</div>
-                    </div>
-                    <p className="mt-3 text-[0.99rem] leading-7 text-[#55625a]">{post.excerpt}</p>
-                    <div className="mt-4 flex flex-wrap gap-2 text-sm text-[#637067]">
-                      <Pill>{post.authorName}</Pill>
-                      <Pill>{post.roleLabel}</Pill>
-                    </div>
-                  </article>
-                ))
-              )}
-            </div>
-          </div>
-        </section>
-
-        <section id="growth" className="grid gap-6 xl:grid-cols-[0.86fr_1.14fr]">
-          <div className="rounded-[34px] border border-[#e5ddcf] bg-white p-6 shadow-[0_18px_35px_rgba(79,68,48,0.05)] md:p-8">
-            <SectionTitle
-              eyebrow="Growth"
-              title="Track your direction, not just your activity"
-              text="This panel shows whether your practice is staying consistent, whether your reflection habit is growing, and what should be improved next."
-            />
-
-            <div className="mt-6 grid gap-4 md:grid-cols-3">
-              <MetricCard label="Alignment pulse" value={`${alignmentPulse}%`} help="A practical score based on streak, level, and reflection activity." />
-              <MetricCard label="Level" value={`${progress?.level ?? 1}`} help="Growth level from continued reflection and applied action." />
-              <MetricCard label="Streak" value={`${progress?.currentStreak ?? 0}`} help="Consecutive days of Quran-linked reflection." />
-            </div>
-
-            <div className="mt-6 rounded-[24px] border border-[#e6e0d4] bg-[linear-gradient(180deg,#fbfaf7_0%,#f8f5ee_100%)] px-5 py-5">
-              <div className="text-sm font-semibold uppercase tracking-[0.15em] text-[#6e7a72]">Recent reflections</div>
-              <div className="mt-4 grid gap-3">
-                {recentEntries.length === 0 ? (
-                  <div className="rounded-[18px] border border-dashed border-[#ddd6c8] px-4 py-4 text-sm text-[#647067]">
-                    Your routine matches will appear here after the first guidance request.
-                  </div>
-                ) : (
-                  recentEntries.map((entry) => (
-                    <article key={entry.id} className="rounded-[18px] bg-white px-4 py-4">
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <div className="font-semibold text-[#1f6a4d]">{themeLabel(entry.themeId)}</div>
-                          <p className="mt-2 text-sm leading-7 text-[#2b342f]">{entry.input}</p>
-                          {entry.ayahReference ? (
-                            <div className="mt-3 inline-flex rounded-full bg-[#edf6ef] px-3 py-2 text-xs font-semibold text-[#1f6a4d]">
-                              {entry.ayahReference}
-                            </div>
-                          ) : null}
-                        </div>
-                        <div className="rounded-full bg-[#f3f8f5] px-3 py-2 text-sm font-semibold text-[#1f6a4d]">
-                          +{entry.xpGained} XP
-                        </div>
+                      <h3 className="mt-3 text-lg font-semibold text-[#1c281f]">{post.title}</h3>
+                      <p className="mt-3 text-sm leading-7 text-[#55645b]">{post.excerpt}</p>
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        <Pill>{post.authorName}</Pill>
+                        <Pill>{post.roleLabel}</Pill>
                       </div>
                     </article>
-                  ))
-                )}
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-[34px] border border-[#e5ddcf] bg-[linear-gradient(180deg,#f7f4ec_0%,#f2eee6_100%)] p-6 shadow-[0_18px_35px_rgba(79,68,48,0.05)] md:p-8">
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <div className="text-sm font-semibold uppercase tracking-[0.18em] text-[#6e7a72]">Reminder library</div>
-                <div className="mt-2 font-serif text-[2rem] text-[#1d241f]">Saved guidance for mentoring, revisiting, and teaching</div>
-              </div>
-              <div className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-[#1f6a4d]">
-                {savedItems.length} saved
-              </div>
-            </div>
-
-            <div className="mt-6 grid gap-4 md:grid-cols-2">
-              {savedItems.length === 0 ? (
-                <div className="rounded-[24px] border border-dashed border-[#d9d4c7] bg-white px-5 py-8 text-[#617068] md:col-span-2">
-                  Save a matched reflection to build your private improvement archive.
+                  ))}
                 </div>
-              ) : (
-                savedItems.map((item) => (
-                  <article key={item.id} className="rounded-[24px] border border-[#e8decd] bg-white px-5 py-5">
-                    <div className="text-sm font-semibold uppercase tracking-[0.12em] text-[#6f7b73]">
-                      {themeLabel(item.themeId)}
-                    </div>
-                    <h3 className="mt-2 text-[1.2rem] font-semibold text-[#1e2922]">{item.title}</h3>
-                    <p className="mt-3 text-sm leading-7 text-[#56635b]">{item.input}</p>
-                    <div className="mt-4 flex flex-wrap gap-2 text-sm text-[#647067]">
-                      <Pill>{item.ayahReference}</Pill>
-                      <Pill>{formatDate(item.createdAt)}</Pill>
-                    </div>
-                  </article>
-                ))
-              )}
-            </div>
-          </div>
-        </section>
+              </DashboardSection>
 
-        <footer className="rounded-[30px] border border-[#e3dbc9] bg-[linear-gradient(180deg,#fdfbf6_0%,#f4eee2_100%)] px-6 py-6 text-center shadow-[0_14px_30px_rgba(79,68,48,0.04)] md:px-8">
-          <div className="font-serif text-[1.5rem] text-[#1b241e]">ViaQuran</div>
-          <p className="mt-3 text-[0.98rem] leading-7 text-[#58645c]">
-            A non-profit effort to help people relate their daily lives, routines, worship, and decisions to the Quran with clarity, reflection, and community support.
-          </p>
-          <p className="mt-4 text-sm text-[#67736b]">
-            Powered by SoftThinkers • <a href="https://www.softthinkers.com" className="font-semibold text-[#1f6a4d] hover:underline">www.softthinkers.com</a>
-          </p>
-        </footer>
+              <div className="grid gap-5">
+                <DashboardSection
+                  title="Add Routine"
+                  subtitle="This form is for a real life input: the routine, time, and concept you want to understand through the Quran."
+                >
+                  <form onSubmit={handleAddRoutine} className="grid gap-4">
+                    <input
+                      value={routineTitle}
+                      onChange={(event) => setRoutineTitle(event.target.value)}
+                      placeholder="Task name, for example: Go to Work"
+                      className="rounded-[18px] border border-[#ded7ca] bg-[#fffdf9] px-4 py-3 text-sm text-[#1e2b23] outline-none"
+                    />
+                    <div className="grid gap-4 md:grid-cols-3">
+                      <select
+                        value={routineFrequency}
+                        onChange={(event) => setRoutineFrequency(event.target.value as RoutineFrequency)}
+                        className="rounded-[18px] border border-[#ded7ca] bg-[#fffdf9] px-4 py-3 text-sm text-[#1e2b23] outline-none"
+                      >
+                        <option>Daily</option>
+                        <option>Weekly</option>
+                        <option>Monthly</option>
+                      </select>
+                      <input
+                        value={routineTime}
+                        onChange={(event) => setRoutineTime(event.target.value)}
+                        type="time"
+                        className="rounded-[18px] border border-[#ded7ca] bg-[#fffdf9] px-4 py-3 text-sm text-[#1e2b23] outline-none"
+                      />
+                      <input
+                        value={routineConcept}
+                        onChange={(event) => setRoutineConcept(event.target.value)}
+                        placeholder="Concept, for example: honesty, prayer, family"
+                        className="rounded-[18px] border border-[#ded7ca] bg-[#fffdf9] px-4 py-3 text-sm text-[#1e2b23] outline-none"
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={isReflecting}
+                      className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#256145] px-5 py-3 text-sm font-semibold text-white disabled:opacity-65"
+                    >
+                      <PlusIcon className="h-5 w-5" />
+                      {isReflecting ? "Building Quran match..." : "Create Quran Match"}
+                    </button>
+                  </form>
+                </DashboardSection>
+
+                <DashboardSection
+                  title="Reflection"
+                  subtitle="After reading the ayah, rate your effort honestly and keep a short note about what needs to improve."
+                >
+                  <div className="rounded-[24px] border border-[#e8dfd2] bg-[#fffdfa] px-5 py-5">
+                    <div className="flex items-center justify-between gap-4">
+                      <div>
+                        <div className="text-sm font-semibold text-[#1e2b23]">{activeRoutine.title}</div>
+                        <div className="mt-1 text-xs uppercase tracking-[0.12em] text-[#7e8b84]">{activeRoutine.time}</div>
+                      </div>
+                      <Pill>{quranReference}</Pill>
+                    </div>
+                    <div className="mt-5 text-sm font-semibold text-[#29372f]">Did you act with the intention today?</div>
+                    <div className="mt-3">
+                      <StarRating rating={reflectionRating} onChange={setReflectionRating} />
+                    </div>
+                    <textarea
+                      value={reflectionNote}
+                      onChange={(event) => setReflectionNote(event.target.value)}
+                      className="mt-4 min-h-[120px] w-full rounded-[20px] border border-[#ddd7ca] bg-white px-4 py-4 text-sm leading-7 text-[#2d3a32] outline-none"
+                    />
+                    <div className="mt-4 flex flex-wrap gap-3">
+                      <button
+                        type="button"
+                        onClick={handleSaveCurrent}
+                        disabled={isSaving}
+                        className="inline-flex items-center gap-2 rounded-2xl bg-[#256145] px-4 py-3 text-sm font-semibold text-white disabled:opacity-65"
+                      >
+                        <BookmarkIcon className="h-5 w-5" />
+                        {isSaving ? "Saving..." : "Save Reflection"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          copyText(reflectionNote)
+                            .then(() => setShareMessage("Reflection note copied to clipboard."))
+                            .catch(() => setError("Clipboard access is not available in this browser."))
+                        }
+                        className="inline-flex items-center gap-2 rounded-2xl border border-[#dad3c6] bg-[#faf6ef] px-4 py-3 text-sm font-semibold text-[#4f5e55]"
+                      >
+                        <NoteIcon className="h-5 w-5" />
+                        Copy Note
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="mt-5 grid gap-3 md:grid-cols-2">
+                    {savedItems.slice(0, 2).map((item) => (
+                      <div key={item.id} className="rounded-[20px] border border-[#ece2d5] bg-white px-4 py-4">
+                        <div className="text-sm font-semibold text-[#1f2c23]">{item.title}</div>
+                        <div className="mt-2 text-xs uppercase tracking-[0.12em] text-[#7b8881]">{item.ayahReference}</div>
+                        <p className="mt-3 text-sm leading-7 text-[#58665d]">{item.input}</p>
+                      </div>
+                    ))}
+                    {savedItems.length === 0 ? (
+                      <div className="rounded-[20px] border border-dashed border-[#ddd5c7] bg-[#fffdf9] px-4 py-6 text-sm leading-7 text-[#68756d] md:col-span-2">
+                        Saved guidance will appear here after you store a matched reflection.
+                      </div>
+                    ) : null}
+                  </div>
+                </DashboardSection>
+              </div>
+            </section>
+
+            <DashboardSection
+              title="Why this website exists"
+              subtitle="People often say their prayers as routine, work as routine, or handle family life as routine. The platform exists to help them understand where Allah speaks about those actions so obedience becomes informed, conscious, and beautiful."
+            >
+              <div className="grid gap-4 lg:grid-cols-3">
+                <div className="rounded-[24px] border border-[#e8dfd2] bg-[#fffdfa] px-5 py-5">
+                  <div className="text-sm font-semibold uppercase tracking-[0.15em] text-[#6e7a72]">Prayer Example</div>
+                  <p className="mt-3 text-sm leading-7 text-[#55645a]">
+                    Someone may pray every day, but when they learn the Quranic command, warning, mercy, and reward around salah,
+                    prayer stops feeling like empty repetition and starts feeling like obedience to Allah.
+                  </p>
+                </div>
+                <div className="rounded-[24px] border border-[#e8dfd2] bg-[#fffdfa] px-5 py-5">
+                  <div className="text-sm font-semibold uppercase tracking-[0.15em] text-[#6e7a72]">Community Purpose</div>
+                  <p className="mt-3 text-sm leading-7 text-[#55645a]">
+                    Members can ask publicly or anonymously, share routines, compare improvement, and help verify which ayat and lessons truly match real life questions.
+                  </p>
+                </div>
+                <div className="rounded-[24px] border border-[#e8dfd2] bg-[#fffdfa] px-5 py-5">
+                  <div className="text-sm font-semibold uppercase tracking-[0.15em] text-[#6e7a72]">Step-by-Step Growth</div>
+                  <p className="mt-3 text-sm leading-7 text-[#55645a]">
+                    Every user should eventually see their own chart, their weak areas, their next improvement action, and the ayah references that shape that path.
+                  </p>
+                </div>
+              </div>
+            </DashboardSection>
+
+            <section id="mobile-journey" className="rounded-[30px] border border-[#e6ddcf] bg-[linear-gradient(180deg,#fffefb_0%,#f7f1e7_100%)] p-5 shadow-[0_20px_55px_rgba(58,50,39,0.06)] md:p-6">
+              <div className="max-w-[760px]">
+                <div className="text-sm font-semibold uppercase tracking-[0.16em] text-[#6e7a72]">Mobile Journey</div>
+                <h2 className="mt-3 font-serif text-[2rem] text-[#17231c] md:text-[2.5rem]">
+                  The same workflow is designed to read clearly on mobile.
+                </h2>
+                <p className="mt-3 text-sm leading-7 text-[#607066] md:text-[0.98rem]">
+                  These sections mirror the requested mobile flow: My Routines, Task Detail, Reminders, Community,
+                  Add Routine, and Reflection. On smaller screens they stack naturally, and each card keeps the user focused on the Quran match.
+                </p>
+              </div>
+
+              <div className="mt-6 grid gap-5 lg:grid-cols-2 2xl:grid-cols-3">
+                <PhoneFrame title="My Routines" activeTab="routines">
+                  <div className="inline-flex rounded-full bg-[#f2eee4] p-1 text-[12px]">
+                    {(["Daily", "Weekly", "Monthly"] as RoutineFrequency[]).map((item) => (
+                      <div
+                        key={item}
+                        className={joinClasses(
+                          "rounded-full px-4 py-2",
+                          item === routineFrequency ? "bg-[#256145] font-semibold text-white" : "text-[#69776f]",
+                        )}
+                      >
+                        {item}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-4 grid gap-3">
+                    {filteredRoutines.map((routine) => (
+                      <div key={routine.id} className="rounded-[22px] border border-[#ede4d7] bg-[#fffdfa] px-4 py-4">
+                        <div className="flex items-center justify-between gap-3">
+                          <div>
+                            <div className="font-semibold text-[#1f2c23]">{routine.title}</div>
+                            <div className="mt-1 text-xs text-[#78867e]">{routine.time}</div>
+                          </div>
+                          <span className="flex h-7 w-7 items-center justify-center rounded-full border border-[#bfd5c3] text-[#256145]">
+                            <CheckIcon className="h-4 w-4" />
+                          </span>
+                        </div>
+                        <p className="mt-3 text-sm leading-7 text-[#5d6b63]">{routine.description}</p>
+                      </div>
+                    ))}
+                  </div>
+                </PhoneFrame>
+
+                <PhoneFrame title="Task Detail" activeTab="routines">
+                  <div className="rounded-[22px] bg-[#256145] px-4 py-4 text-white">
+                    <div className="text-lg font-semibold">{activeRoutine.title}</div>
+                    <div className="mt-1 text-sm text-white/80">{activeRoutine.time} - {activeRoutine.frequency}</div>
+                  </div>
+                  <div className="mt-4 text-sm font-semibold text-[#1f2c23]">Intention (Niyyah)</div>
+                  <p className="mt-2 text-sm leading-7 text-[#5d6b63]">{activeRoutine.intention}</p>
+                  <div className="mt-4 flex items-center justify-between">
+                    <div className="text-sm font-semibold text-[#1f2c23]">Quran Connections</div>
+                    <div className="text-sm font-semibold text-[#256145]">{quranReference}</div>
+                  </div>
+                  {currentAyah.arabic ? (
+                    <div className="mt-4 text-right font-serif text-[1.45rem] leading-[2] text-[#1d291f]">{currentAyah.arabic}</div>
+                  ) : null}
+                  <p className="mt-3 text-sm leading-7 text-[#334139]">{currentAyah.english}</p>
+                  <div className="mt-4 rounded-[18px] bg-[#f6f3eb] px-4 py-4 text-sm leading-7 text-[#53625a]">
+                    {activeExplanation}
+                  </div>
+                  <button type="button" className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-[#256145] px-4 py-3 text-sm font-semibold text-white">
+                    <CheckIcon className="h-5 w-5" />
+                    Mark as Done
+                  </button>
+                </PhoneFrame>
+
+                <PhoneFrame title="Reminders" activeTab="dashboard">
+                  <label className="flex items-center justify-between rounded-[18px] bg-[#f7f4ed] px-4 py-3">
+                    <span className="text-sm font-semibold text-[#1f2c23]">Enable Reminders</span>
+                    <span className="relative inline-flex h-6 w-11 rounded-full bg-[#256145]">
+                      <span className="absolute right-1 top-1 h-4 w-4 rounded-full bg-white" />
+                    </span>
+                  </label>
+                  <div className="mt-4 text-sm font-semibold text-[#1f2c23]">Upcoming Reminders</div>
+                  <div className="mt-3 grid gap-3">
+                    {ROUTINE_DECK.slice(0, 4).map((routine) => (
+                      <div key={routine.id} className="rounded-[20px] border border-[#ebe1d3] bg-white px-4 py-4">
+                        <div className="flex items-center justify-between gap-3">
+                          <div>
+                            <div className="font-semibold text-[#1f2c23]">{routine.title}</div>
+                            <div className="mt-1 text-xs text-[#7b8881]">{routine.time}</div>
+                          </div>
+                          <BellIcon className="h-5 w-5 text-[#256145]" />
+                        </div>
+                        <p className="mt-3 text-sm leading-7 text-[#5d6b63]">{routine.description}</p>
+                      </div>
+                    ))}
+                  </div>
+                </PhoneFrame>
+
+                <PhoneFrame title="Community" activeTab="reflection">
+                  <div className="inline-flex rounded-full bg-[#f2eee4] p-1 text-[12px]">
+                    <div className="rounded-full bg-[#256145] px-4 py-2 font-semibold text-white">Discover</div>
+                    <div className="rounded-full px-4 py-2 text-[#6f7c74]">My Submissions</div>
+                  </div>
+                  <div className="mt-4 text-sm font-semibold text-[#1f2c23]">Suggested Connections</div>
+                  <div className="mt-3 grid gap-3">
+                    {suggestedCommunityCards.map((item) => (
+                      <div key={item.title} className="rounded-[20px] border border-[#ebe1d3] bg-white px-4 py-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <div className="font-semibold text-[#1f2c23]">{item.title}</div>
+                            <div className="mt-1 text-xs uppercase tracking-[0.12em] text-[#7b8881]">{themeLabel(item.themeId)}</div>
+                          </div>
+                          <Pill>{item.badge}</Pill>
+                        </div>
+                        <p className="mt-3 text-sm leading-7 text-[#5d6b63]">{item.excerpt}</p>
+                      </div>
+                    ))}
+                  </div>
+                </PhoneFrame>
+
+                <PhoneFrame title="Add Routine" activeTab="add">
+                  <div className="grid gap-3">
+                    <input
+                      value={routineTitle}
+                      onChange={(event) => setRoutineTitle(event.target.value)}
+                      placeholder="Task name"
+                      className="rounded-[16px] border border-[#ddd7ca] bg-[#fffdfa] px-4 py-3 text-sm text-[#1f2c23] outline-none"
+                    />
+                    <div className="inline-flex rounded-full bg-[#f2eee4] p-1 text-[12px]">
+                      {(["Daily", "Weekly", "Monthly"] as RoutineFrequency[]).map((item) => (
+                        <button
+                          key={item}
+                          type="button"
+                          onClick={() => setRoutineFrequency(item)}
+                          className={joinClasses(
+                            "rounded-full px-4 py-2",
+                            item === routineFrequency ? "bg-[#256145] font-semibold text-white" : "text-[#6f7c74]",
+                          )}
+                        >
+                          {item}
+                        </button>
+                      ))}
+                    </div>
+                    <input
+                      type="time"
+                      value={routineTime}
+                      onChange={(event) => setRoutineTime(event.target.value)}
+                      className="rounded-[16px] border border-[#ddd7ca] bg-[#fffdfa] px-4 py-3 text-sm text-[#1f2c23] outline-none"
+                    />
+                    <input
+                      value={routineConcept}
+                      onChange={(event) => setRoutineConcept(event.target.value)}
+                      placeholder="Category / concept"
+                      className="rounded-[16px] border border-[#ddd7ca] bg-[#fffdfa] px-4 py-3 text-sm text-[#1f2c23] outline-none"
+                    />
+                  </div>
+                </PhoneFrame>
+
+                <PhoneFrame title="Reflection" activeTab="reflection">
+                  <div className="rounded-[20px] border border-[#ece3d5] bg-[#fffdfa] px-4 py-4">
+                    <div className="font-semibold text-[#1f2c23]">{activeRoutine.title}</div>
+                    <div className="mt-1 text-xs text-[#7b8881]">Today, {activeRoutine.time}</div>
+                  </div>
+                  <div className="mt-4 text-sm font-semibold text-[#1f2c23]">Did you act with the intention today?</div>
+                  <div className="mt-3">
+                    <StarRating rating={reflectionRating} onChange={setReflectionRating} />
+                  </div>
+                  <textarea
+                    value={reflectionNote}
+                    onChange={(event) => setReflectionNote(event.target.value)}
+                    className="mt-4 min-h-[150px] w-full rounded-[20px] border border-[#ddd7ca] bg-white px-4 py-4 text-sm leading-7 text-[#2d3a32] outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleSaveCurrent}
+                    disabled={isSaving}
+                    className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-[#256145] px-4 py-3 text-sm font-semibold text-white disabled:opacity-65"
+                  >
+                    <BookmarkIcon className="h-5 w-5" />
+                    {isSaving ? "Saving..." : "Save Reflection"}
+                  </button>
+                </PhoneFrame>
+              </div>
+            </section>
+
+            <footer className="rounded-[28px] border border-[#e4dbcc] bg-[linear-gradient(180deg,#fffefb_0%,#f4eee2_100%)] px-5 py-5 text-center shadow-[0_18px_45px_rgba(53,49,36,0.05)]">
+              <div className="font-serif text-[1.6rem] text-[#1b281f]">ViaQuran</div>
+              <p className="mt-3 text-sm leading-7 text-[#58665d]">
+                A non-profit effort to help people relate their daily routines, decisions, worship, and struggles to the Quran with clarity and community.
+              </p>
+              <p className="mt-4 text-sm text-[#64736a]">
+                Powered by SoftThinkers • <a href="https://www.softthinkers.com" className="font-semibold text-[#256145] hover:underline">www.softthinkers.com</a>
+              </p>
+            </footer>
+          </div>
+        </div>
       </div>
     </main>
   );
 }
 
-function SearchIcon(props: IconProps) {
+function HomeIcon(props: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" {...props}>
+      <path d="M4 11.5 12 5l8 6.5" />
+      <path d="M6.5 10.5V19h11v-8.5" />
+    </svg>
+  );
+}
+
+function RoutineIcon(props: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" {...props}>
+      <path d="M8 6h13" />
+      <path d="M8 12h13" />
+      <path d="M8 18h13" />
+      <path d="M3 6h.01" />
+      <path d="M3 12h.01" />
+      <path d="M3 18h.01" />
+    </svg>
+  );
+}
+
+function PlusIcon(props: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" {...props}>
+      <path d="M12 5v14" />
+      <path d="M5 12h14" />
+    </svg>
+  );
+}
+
+function BookIcon(props: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" {...props}>
+      <path d="M4.5 5.5A2.5 2.5 0 0 1 7 3h12.5v16H7a2.5 2.5 0 0 0-2.5 2.5V5.5Z" />
+      <path d="M7 3v16" />
+    </svg>
+  );
+}
+
+function BellIcon(props: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" {...props}>
+      <path d="M6 9a6 6 0 1 1 12 0c0 6 2.5 7 2.5 7h-17S6 15 6 9Z" />
+      <path d="M10 19a2 2 0 0 0 4 0" />
+    </svg>
+  );
+}
+
+function CommunityIcon(props: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" {...props}>
+      <path d="M16 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2" />
+      <circle cx="9.5" cy="7" r="3.5" />
+      <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+      <path d="M16 3.13a3.5 3.5 0 0 1 0 6.74" />
+    </svg>
+  );
+}
+
+function ProfileIcon(props: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" {...props}>
+      <path d="M20 21a8 8 0 1 0-16 0" />
+      <circle cx="12" cy="8" r="4" />
+    </svg>
+  );
+}
+
+function SettingsIcon(props: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" {...props}>
+      <path d="m12 2 1.5 3.3 3.6.3-2.7 2.5.8 3.6-3.2-1.8-3.2 1.8.8-3.6-2.7-2.5 3.6-.3L12 2Z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  );
+}
+
+function CheckIcon(props: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" {...props}>
-      <circle cx="11" cy="11" r="7" />
-      <path d="m20 20-3.5-3.5" />
+      <path d="m5 12 4.2 4.2L19 6.5" />
+    </svg>
+  );
+}
+
+function StarIcon(props: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" {...props}>
+      <path d="m12 3 2.7 5.46L20.8 9.3l-4.4 4.28 1.04 6.12L12 16.8 6.56 19.7l1.04-6.12L3.2 9.3l6.1-.84L12 3Z" />
+    </svg>
+  );
+}
+
+function FlameIcon(props: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" {...props}>
+      <path d="M12 3c2.6 3 4 5.2 4 7.5A4 4 0 0 1 12 14a4 4 0 0 1-4-3.5C8 8 9.4 6 12 3Z" />
+      <path d="M7.5 14.5A5.5 5.5 0 0 0 18 16.5c0-3-2-4.7-3.3-6.1" />
     </svg>
   );
 }
@@ -985,7 +1504,7 @@ function SparkIcon(props: IconProps) {
 
 function BookmarkIcon(props: IconProps) {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" {...props}>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" {...props}>
       <path d="M7 4h10v16l-5-3-5 3V4Z" />
     </svg>
   );
@@ -993,7 +1512,7 @@ function BookmarkIcon(props: IconProps) {
 
 function ShareIcon(props: IconProps) {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" {...props}>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" {...props}>
       <path d="M15 8a3 3 0 1 0-2.9-4H12a3 3 0 0 0 0 6Z" />
       <path d="M6 14a3 3 0 1 0-2.9-4H3a3 3 0 0 0 0 6Z" />
       <path d="M18 22a3 3 0 1 0-2.9-4H15a3 3 0 0 0 0 6Z" />
@@ -1005,7 +1524,7 @@ function ShareIcon(props: IconProps) {
 
 function NoteIcon(props: IconProps) {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" {...props}>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" {...props}>
       <path d="M6 3h9l5 5v13H6z" />
       <path d="M15 3v5h5" />
       <path d="M9 13h6" />
@@ -1014,20 +1533,12 @@ function NoteIcon(props: IconProps) {
   );
 }
 
-function CompassIcon(props: IconProps) {
+function DotsIcon(props: IconProps) {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" {...props}>
-      <circle cx="12" cy="12" r="9" />
-      <path d="m14.5 9.5-2 5-5 2 2-5 5-2Z" />
-    </svg>
-  );
-}
-
-function CircleIcon(props: IconProps) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" {...props}>
-      <path d="M12 3a9 9 0 1 0 9 9" />
-      <path d="M12 7v5l3 3" />
+    <svg viewBox="0 0 24 24" fill="currentColor" {...props}>
+      <circle cx="6" cy="12" r="1.6" />
+      <circle cx="12" cy="12" r="1.6" />
+      <circle cx="18" cy="12" r="1.6" />
     </svg>
   );
 }

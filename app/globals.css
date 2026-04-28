@@ -4,10 +4,10 @@
 
 :root {
   color-scheme: light;
-  --viaquran-bg: #f7f2e8;
-  --viaquran-ink: #17211b;
-  --viaquran-muted: #56625a;
-  --viaquran-accent: #1f6a4d;
+  --viaquran-bg: #f7f5f0;
+  --viaquran-ink: #17231c;
+  --viaquran-muted: #627168;
+  --viaquran-accent: #256145;
 }
 
 * {
@@ -21,9 +21,10 @@ html {
 body {
   margin: 0;
   min-height: 100vh;
-  font-family: "Trebuchet MS", "Segoe UI", Tahoma, sans-serif;
+  font-family: "Aptos", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
   color: var(--viaquran-ink);
-  background: linear-gradient(180deg, #faf7f1 0%, var(--viaquran-bg) 100%);
+  background:
+    radial-gradient(circle at top, #ffffff 0%, #fbf8f2 36%, var(--viaquran-bg) 100%);
 }
 
 button,
@@ -38,7 +39,7 @@ a {
 }
 
 .font-serif {
-  font-family: "Palatino Linotype", "Book Antiqua", Georgia, serif;
+  font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
 }
 
 .deck-scroll {
