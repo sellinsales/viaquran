@@ -2,11 +2,16 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import {
+  AlertCircle,
   Bell,
   BookOpen,
   CirclePlus,
+  KeyRound,
   Heart,
+  Lock,
   PenSquare,
+  UserRound,
+  X,
 } from "lucide-react";
 import { Header } from "@/components/dashboard/header";
 import { InsightCard } from "@/components/dashboard/insight-card";
@@ -15,7 +20,12 @@ import { StatCard } from "@/components/dashboard/stat-card";
 import { TaskCard } from "@/components/dashboard/task-card";
 import { RoutineDashboardPayload, ThemeId } from "@/lib/types";
 
-const DASHBOARD_USER_ID = "guest-demo";
+const SESSION_STORAGE_KEY = "viaquran.session";
+
+interface DashboardSession {
+  userId: string;
+  displayName: string;
+}
 
 function isErrorPayload(value: unknown): value is { error?: string } {
   return Boolean(value && typeof value === "object" && "error" in value);
@@ -71,7 +81,11 @@ function buildVerseUrl(reference: string) {
 }
 
 async function fetchDashboardPayload() {
-  const response = await fetch(`/api/dashboard?userId=${DASHBOARD_USER_ID}`, {
+  return fetchDashboardPayloadForUser("guest-demo");
+}
+
+async function fetchDashboardPayloadForUser(userId: string) {
+  const response = await fetch(`/api/dashboard?userId=${encodeURIComponent(userId)}`, {
     cache: "no-store",
   });
   const payload = (await response.json().catch(() => null)) as unknown;
@@ -87,7 +101,38 @@ async function fetchDashboardPayload() {
   return payload;
 }
 
+function normalizeSession(value: Partial<DashboardSession> | null | undefined): DashboardSession {
+  const userId = value?.userId?.trim() || "guest-demo";
+  const displayName = value?.displayName?.trim() || "Ahmed";
+
+  return {
+    userId,
+    displayName,
+  };
+}
+
+function getInitials(name: string) {
+  const words = name
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+
+  if (words.length === 0) {
+    return "A";
+  }
+
+  return words
+    .slice(0, 2)
+    .map((word) => word[0]!.toUpperCase())
+    .join("");
+}
+
 export function ViaQuranApp() {
+  const [session, setSession] = useState<DashboardSession>(() => normalizeSession(null));
+  const [sessionReady, setSessionReady] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [profileDraft, setProfileDraft] = useState<DashboardSession>(() => normalizeSession(null));
+  const [liveTimeLabel, setLiveTimeLabel] = useState("");
   const [dashboard, setDashboard] = useState<RoutineDashboardPayload | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [notice, setNotice] = useState<{ tone: "error" | "success"; message: string } | null>(null);
@@ -96,7 +141,7 @@ export function ViaQuranApp() {
   const routinesRef = useRef<HTMLElement | null>(null);
 
   const refreshDashboard = async () => {
-    const payload = await fetchDashboardPayload();
+    const payload = await fetchDashboardPayloadForUser(session.userId);
     startTransition(() => {
       setDashboard(payload);
     });
@@ -113,7 +158,7 @@ export function ViaQuranApp() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          userId: DASHBOARD_USER_ID,
+          userId: session.userId,
           completed: !completed,
         }),
       });
@@ -164,7 +209,7 @@ export function ViaQuranApp() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          userId: DASHBOARD_USER_ID,
+          userId: session.userId,
           title: title.trim(),
           time: time.trim(),
           intention: intention.trim(),
@@ -213,7 +258,7 @@ export function ViaQuranApp() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          userId: DASHBOARD_USER_ID,
+          userId: session.userId,
           input: input.trim(),
         }),
       });
@@ -255,6 +300,45 @@ export function ViaQuranApp() {
   };
 
   useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(SESSION_STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw) as Partial<DashboardSession>;
+        const normalized = normalizeSession(parsed);
+        setSession(normalized);
+        setProfileDraft(normalized);
+      }
+    } catch {
+      // Ignore invalid local session payloads and fall back to guest demo mode.
+    } finally {
+      setSessionReady(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    const updateClock = () => {
+      setLiveTimeLabel(
+        new Intl.DateTimeFormat("en", {
+          hour: "numeric",
+          minute: "2-digit",
+          second: "2-digit",
+        }).format(new Date()),
+      );
+    };
+
+    updateClock();
+    const timer = window.setInterval(updateClock, 1000);
+
+    return () => {
+      window.clearInterval(timer);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!sessionReady) {
+      return;
+    }
+
     let cancelled = false;
 
     async function loadDashboard() {
@@ -262,7 +346,7 @@ export function ViaQuranApp() {
       setNotice(null);
 
       try {
-        const payload = await fetchDashboardPayload();
+        const payload = await fetchDashboardPayloadForUser(session.userId);
         if (cancelled) {
           return;
         }
@@ -292,21 +376,51 @@ export function ViaQuranApp() {
     return () => {
       cancelled = true;
     };
-  }, [startTransition]);
+  }, [session.userId, sessionReady, startTransition]);
+
+  const handleProfileSave = () => {
+    const nextSession = normalizeSession(profileDraft);
+    setSession(nextSession);
+    setProfileDraft(nextSession);
+    window.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(nextSession));
+    setIsProfileOpen(false);
+    setNotice({
+      tone: "success",
+      message:
+        nextSession.userId === "guest-demo"
+          ? "Guest demo mode enabled."
+          : `Live user session set to ${nextSession.displayName}.`,
+    });
+  };
+
+  const handleUseGuestDemo = () => {
+    const nextSession = normalizeSession({ userId: "guest-demo", displayName: "Ahmed" });
+    setSession(nextSession);
+    setProfileDraft(nextSession);
+    window.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(nextSession));
+    setIsProfileOpen(false);
+    setNotice({
+      tone: "success",
+      message: "Switched back to guest demo mode.",
+    });
+  };
 
   return (
     <main className="min-h-screen bg-[#f6f1e7] p-3 text-[#1d2b22] md:p-5">
-      <div className="mx-auto max-w-[1540px] grid gap-4 xl:grid-cols-[256px_minmax(0,1fr)]">
+      <div className="mx-auto max-w-[1540px] grid gap-4 lg:grid-cols-[256px_minmax(0,1fr)]">
         <Sidebar />
 
         <section className="overflow-hidden rounded-[30px] border border-[#eadfce] bg-[#fffdf9] shadow-[0_20px_60px_rgba(62,48,24,0.08)]">
           <Header
-            greetingName={dashboard?.greetingName ?? "Ahmed"}
+            greetingName={session.displayName}
             subtitle={dashboard?.subtitle ?? "Turn your daily routine into acts of worship"}
             dateLabel={dashboard?.dateLabel ?? "Loading..."}
             hijriDateLabel={dashboard?.hijriDateLabel ?? "Loading..."}
-            profileName={dashboard?.profileName ?? "Ahmed"}
-            profileInitials={dashboard?.profileInitials ?? "A"}
+            timeLabel={liveTimeLabel || "Loading time..."}
+            profileName={session.displayName}
+            profileInitials={getInitials(session.displayName)}
+            storageMode={dashboard?.storageMode ?? "file"}
+            onOpenProfile={() => setIsProfileOpen(true)}
           />
 
           {notice ? (
@@ -319,6 +433,21 @@ export function ViaQuranApp() {
                 }`}
               >
                 {notice.message}
+              </div>
+            </div>
+          ) : null}
+
+          {dashboard?.storageMode === "file" ? (
+            <div className="px-5 pt-5 md:px-8">
+              <div className="flex flex-wrap items-start gap-3 rounded-2xl border border-[#eddcbe] bg-[#fff8ec] px-4 py-3 text-sm text-[#77581b]">
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                <div>
+                  <div className="font-medium">Live MySQL is not active.</div>
+                  <div className="mt-1">
+                    Set `DB_HOST`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, and `VIAQURAN_STORAGE_MODE=mysql`
+                    in your environment to switch from local file demo mode to the real database.
+                  </div>
+                </div>
               </div>
             </div>
           ) : null}
@@ -439,6 +568,93 @@ export function ViaQuranApp() {
           </div>
         </section>
       </div>
+
+      {isProfileOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(24,18,12,0.45)] p-4">
+          <div className="w-full max-w-[460px] rounded-[28px] border border-[#eadfce] bg-white p-6 shadow-[0_24px_80px_rgba(24,18,12,0.22)]">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <div className="text-[1.4rem] font-semibold text-[#18251d]">Live User Session</div>
+                <p className="mt-2 text-sm leading-7 text-[#5a685f]">
+                  Set a real user identity for the dashboard. When MySQL is configured, this user will
+                  get separate persisted routines, reflections, and progress.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsProfileOpen(false)}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#eee6da] text-[#506157] transition hover:border-[#d8cbb7]"
+                aria-label="Close profile dialog"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="mt-6 grid gap-4">
+              <label className="grid gap-2">
+                <span className="inline-flex items-center gap-2 text-sm font-medium text-[#1f2d24]">
+                  <UserRound className="h-4 w-4" />
+                  <span>Display name</span>
+                </span>
+                <input
+                  value={profileDraft.displayName}
+                  onChange={(event) =>
+                    setProfileDraft((current) => ({
+                      ...current,
+                      displayName: event.target.value,
+                    }))
+                  }
+                  className="rounded-2xl border border-[#e5dbcd] bg-[#fffdf9] px-4 py-3 text-base outline-none transition focus:border-[#2d7a4b]"
+                  placeholder="Ahmed"
+                />
+              </label>
+
+              <label className="grid gap-2">
+                <span className="inline-flex items-center gap-2 text-sm font-medium text-[#1f2d24]">
+                  <KeyRound className="h-4 w-4" />
+                  <span>User key</span>
+                </span>
+                <input
+                  value={profileDraft.userId}
+                  onChange={(event) =>
+                    setProfileDraft((current) => ({
+                      ...current,
+                      userId: event.target.value,
+                    }))
+                  }
+                  className="rounded-2xl border border-[#e5dbcd] bg-[#fffdf9] px-4 py-3 text-base outline-none transition focus:border-[#2d7a4b]"
+                  placeholder="ahmed"
+                />
+              </label>
+
+              <div className="rounded-2xl bg-[#f8f4ec] px-4 py-3 text-sm leading-7 text-[#5c695f]">
+                `guest-demo` keeps using the demo identity. Any other `user key` becomes its own live
+                user bucket.
+              </div>
+            </div>
+
+            <div className="mt-6 flex flex-wrap justify-end gap-3">
+              <button
+                type="button"
+                onClick={handleUseGuestDemo}
+                className="inline-flex items-center gap-2 rounded-xl border border-[#e2d8cb] px-4 py-3 text-sm font-medium text-[#53635a] transition hover:bg-[#f8f4ec]"
+              >
+                <Lock className="h-4 w-4" />
+                <span>Use Guest Demo</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleProfileSave}
+                className="rounded-xl bg-[#17683f] px-5 py-3 text-sm font-medium text-white shadow-[0_14px_24px_rgba(23,104,63,0.24)] transition hover:bg-[#145836]"
+              >
+                Save Live User
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </main>
   );
 }

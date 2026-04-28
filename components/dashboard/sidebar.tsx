@@ -25,7 +25,7 @@ const menuItems = [
 
 export function Sidebar() {
   return (
-    <aside className="flex min-h-full flex-col rounded-[30px] border border-[#e9dfd1] bg-[#fffdf9] p-5 shadow-[0_16px_40px_rgba(62,48,24,0.08)] md:p-6">
+    <aside className="flex min-h-full flex-col rounded-[30px] border border-[#e9dfd1] bg-[#fffdf9] p-5 shadow-[0_16px_40px_rgba(62,48,24,0.08)] md:p-6 lg:sticky lg:top-5 lg:h-[calc(100vh-2.5rem)]">
       <div className="flex items-center gap-4">
         <div className="flex h-16 w-16 items-center justify-center rounded-[20px] border border-[#ebe1d4] bg-[#f9f4ea]">
           <img
