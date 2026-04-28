@@ -1,37 +1,60 @@
-import { Leaf } from "lucide-react";
+import { Bell, CalendarDays, ChevronDown, Hand } from "lucide-react";
 
 export function Header({
   greetingName,
   subtitle,
   dateLabel,
   hijriDateLabel,
+  profileName,
+  profileInitials,
 }: {
   greetingName: string;
   subtitle: string;
   dateLabel: string;
   hijriDateLabel: string;
+  profileName: string;
+  profileInitials: string;
 }) {
   return (
-    <header className="rounded-[28px] border border-[#e8e1d4] bg-white px-5 py-5 shadow-[0_14px_35px_rgba(51,45,35,0.05)] md:px-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
+    <header className="border-b border-[#ece3d5] px-5 py-5 md:px-8 md:py-6">
+      <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
         <div>
-          <div className="inline-flex items-center gap-2 text-[1.9rem] font-semibold leading-tight text-[#1c2a21] md:text-[2.2rem]">
+          <div className="flex flex-wrap items-center gap-3 text-[2rem] font-semibold leading-tight text-[#18251d] md:text-[2.15rem]">
             <span>Assalamu Alaikum, {greetingName}</span>
-            <Leaf className="h-5 w-5 text-[#256145]" />
+            <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[#fff3db] text-[#d6972b]">
+              <Hand className="h-5 w-5" />
+            </span>
           </div>
-          <div className="mt-2 text-sm text-[#738078]">
-            {subtitle}
-          </div>
+          <p className="mt-2 text-lg text-[#55635b]">{subtitle}</p>
         </div>
 
-        <div className="flex items-center gap-4">
-          <div className="text-right text-sm text-[#6f7d75]">
-            <div>{dateLabel}</div>
-            <div className="mt-1">{hijriDateLabel}</div>
+        <div className="flex flex-wrap items-center gap-4 md:gap-6">
+          <div className="flex items-start gap-3 rounded-full border border-[#eee6da] bg-white px-4 py-3">
+            <CalendarDays className="mt-0.5 h-5 w-5 text-[#4d5f54]" />
+            <div className="text-sm text-[#5b685f]">
+              <div className="font-medium text-[#1f2d24]">{dateLabel}</div>
+              <div className="mt-1">{hijriDateLabel}</div>
+            </div>
           </div>
-          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#256145] text-sm font-semibold text-white">
-            {greetingName.slice(0, 2).toUpperCase()}
-          </div>
+
+          <button
+            type="button"
+            className="inline-flex h-12 w-12 items-center justify-center rounded-full border border-[#eee6da] bg-white text-[#1f2d24] transition hover:border-[#d8cbb7]"
+            aria-label="Notifications"
+          >
+            <Bell className="h-5 w-5" />
+          </button>
+
+          <button
+            type="button"
+            className="inline-flex items-center gap-3 rounded-full border border-[#eee6da] bg-white px-3 py-2 text-left transition hover:border-[#d8cbb7]"
+          >
+            <span className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-[#1f6a3f] text-base font-semibold text-white">
+              {profileInitials}
+            </span>
+            <span className="text-base font-medium text-[#1d2b22]">{profileName}</span>
+            <ChevronDown className="h-4 w-4 text-[#66756c]" />
+          </button>
         </div>
       </div>
     </header>

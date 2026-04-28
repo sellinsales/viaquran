@@ -1,42 +1,49 @@
-import { ArrowRight } from "lucide-react";
+import { BookOpen, Sparkles } from "lucide-react";
 
 export function InsightCard({
   arabic,
   translation,
   reference,
   buttonLabel,
+  onOpen,
 }: {
   arabic: string;
   translation: string;
   reference: string;
   buttonLabel: string;
+  onOpen?: () => void;
 }) {
   return (
-    <section className="rounded-[28px] border border-[#e7dfd2] bg-white p-5 shadow-[0_18px_40px_rgba(52,46,35,0.06)]">
-      <div className="text-sm font-semibold text-[#256145]">Daily Insight</div>
-
-      <div className="mt-5 rounded-[24px] bg-[#fbf8f1] px-4 py-5">
-        <div className="text-right font-serif text-[1.65rem] leading-[2.1] text-[#1d2b22]">
-          {arabic}
-        </div>
-        <p className="mt-4 text-sm leading-7 text-[#415046]">{translation}</p>
-        <div className="mt-4 text-sm font-semibold text-[#6f7d75]">{reference}</div>
+    <section className="rounded-[24px] border border-[#eadfce] bg-white p-5 shadow-[0_14px_35px_rgba(62,48,24,0.07)]">
+      <div className="flex items-center gap-3 text-[#1f2d24]">
+        <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#fff2d3] text-[#d89a18]">
+          <Sparkles className="h-4 w-4" />
+        </span>
+        <div className="text-[1.1rem] font-medium">Daily Quranic Insight</div>
       </div>
 
-      <div className="mt-6 overflow-hidden rounded-[24px] border border-[#efe6d9] bg-[linear-gradient(180deg,#f9f5ec_0%,#f3ecdf_100%)] px-4 py-5 text-center">
+      <div className="mt-6 px-3 text-center">
+        <div className="font-serif text-[2.2rem] leading-[1.9] text-[#1d6b3f]">{arabic}</div>
+        <div className="mx-auto mt-5 h-px w-28 bg-[linear-gradient(90deg,transparent,#d9cfbe,transparent)]" />
+        <p className="mt-6 text-[1.02rem] leading-9 text-[#4e5e55]">{translation}</p>
+        <div className="mt-5 text-[1.05rem] font-medium text-[#2b7a49]">{reference}</div>
+      </div>
+
+      <div className="mt-5 overflow-hidden rounded-[22px] border border-[#efe5d7] bg-[radial-gradient(circle_at_top,#fffdf6_0%,#f5ecde_100%)]">
         <img
-          src="/logo_viaquran.png"
-          alt="Quran illustration"
-          className="mx-auto h-36 w-36 object-contain"
+          src="/header.png"
+          alt="Open Quran with lantern"
+          className="h-48 w-full object-cover object-[78%_88%]"
         />
       </div>
 
       <button
         type="button"
-        className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[#256145] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#1f5139]"
+        onClick={onOpen}
+        className="mt-5 inline-flex w-full items-center justify-center gap-3 rounded-2xl bg-[#17683f] px-4 py-3.5 text-[1rem] font-medium text-white shadow-[0_14px_24px_rgba(23,104,63,0.24)] transition hover:bg-[#145836]"
       >
-        {buttonLabel}
-        <ArrowRight className="h-4 w-4" />
+        <BookOpen className="h-5 w-5" />
+        <span>{buttonLabel}</span>
       </button>
     </section>
   );

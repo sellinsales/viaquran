@@ -1,49 +1,142 @@
-import { CheckCircle2, Circle, ChevronRight } from "lucide-react";
+import {
+  BookOpen,
+  BriefcaseBusiness,
+  Check,
+  Dumbbell,
+  LucideIcon,
+  MoonStar,
+  Sparkles,
+  UsersRound,
+} from "lucide-react";
+import { ThemeId } from "@/lib/types";
+
+function getTaskVisual(title: string, themeId: ThemeId): {
+  icon: LucideIcon;
+  bubbleClass: string;
+  iconClass: string;
+} {
+  const normalized = title.toLowerCase();
+
+  if (normalized.includes("work")) {
+    return {
+      icon: BriefcaseBusiness,
+      bubbleClass: "bg-[#e7f3ea]",
+      iconClass: "text-[#2f7f4a]",
+    };
+  }
+
+  if (normalized.includes("study") || normalized.includes("learn")) {
+    return {
+      icon: BookOpen,
+      bubbleClass: "bg-[#fff1cf]",
+      iconClass: "text-[#cb9216]",
+    };
+  }
+
+  if (normalized.includes("exercise") || normalized.includes("workout")) {
+    return {
+      icon: Dumbbell,
+      bubbleClass: "bg-[#eaf6ef]",
+      iconClass: "text-[#2d8654]",
+    };
+  }
+
+  if (normalized.includes("family")) {
+    return {
+      icon: UsersRound,
+      bubbleClass: "bg-[#efe7ff]",
+      iconClass: "text-[#7653d8]",
+    };
+  }
+
+  if (normalized.includes("prayer") || normalized.includes("tahajjud")) {
+    return {
+      icon: MoonStar,
+      bubbleClass: "bg-[#ecebff]",
+      iconClass: "text-[#5f62df]",
+    };
+  }
+
+  if (themeId === "gratitude") {
+    return {
+      icon: Sparkles,
+      bubbleClass: "bg-[#fff3d6]",
+      iconClass: "text-[#cd9a1e]",
+    };
+  }
+
+  return {
+    icon: Sparkles,
+    bubbleClass: "bg-[#edf5ef]",
+    iconClass: "text-[#256145]",
+  };
+}
 
 export function TaskCard({
   title,
+  summary,
   time,
   intention,
   quranConnections,
   completed,
+  themeId,
   onToggle,
   disabled = false,
 }: {
   title: string;
+  summary: string;
   time: string;
   intention: string;
   quranConnections: string;
   completed: boolean;
+  themeId: ThemeId;
   onToggle: () => void;
   disabled?: boolean;
 }) {
+  const visual = getTaskVisual(title, themeId);
+  const Icon = visual.icon;
+
   return (
-    <div className="grid gap-4 rounded-[24px] border border-[#ebe4d8] bg-white px-4 py-4 shadow-[0_12px_30px_rgba(51,45,35,0.04)] md:grid-cols-[auto_minmax(0,180px)_minmax(0,1fr)_auto] md:items-center">
-      <div className="flex items-center gap-3">
+    <article className="rounded-[22px] border border-[#ece3d5] bg-white px-4 py-4 shadow-[0_10px_28px_rgba(62,48,24,0.06)] md:px-5">
+      <div className="grid gap-4 md:grid-cols-[auto_minmax(0,220px)_minmax(0,1fr)_170px_110px_auto] md:items-center">
+        <div className={`flex h-16 w-16 items-center justify-center rounded-full ${visual.bubbleClass}`}>
+          <Icon className={`h-7 w-7 ${visual.iconClass}`} strokeWidth={2.1} />
+        </div>
+
+        <div className="min-w-0">
+          <div className="text-[1.1rem] font-semibold text-[#1d2b22]">{title}</div>
+          <div className="mt-1 text-base text-[#6a7670]">{summary}</div>
+        </div>
+
+        <div className="text-sm leading-7 text-[#4d5d54] md:border-l md:border-[#eee7da] md:pl-6">
+          <div className="font-medium text-[#1f2d24]">Intention</div>
+          <div className="mt-1">{intention}</div>
+        </div>
+
+        <div className="text-sm text-[#4d5d54] md:border-l md:border-[#eee7da] md:pl-6">
+          <div className="font-medium text-[#1f2d24]">Quran Connection</div>
+          <div className="mt-2 inline-flex items-center gap-2 text-[#2a7b4a]">
+            <BookOpen className="h-4 w-4" />
+            <span>{quranConnections}</span>
+          </div>
+        </div>
+
+        <div className="text-xl font-medium text-[#1f2d24] md:justify-self-end">{time}</div>
+
         <button
           type="button"
           onClick={onToggle}
           disabled={disabled}
-          className="text-[#256145] transition hover:scale-105 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:scale-100"
+          className={`inline-flex h-8 w-8 items-center justify-center rounded-[8px] border transition md:justify-self-end ${
+            completed
+              ? "border-[#1f6a3f] bg-[#1f6a3f] text-white"
+              : "border-[#ddd6ca] bg-white text-transparent"
+          } disabled:cursor-not-allowed disabled:opacity-60`}
           aria-label={completed ? `Mark ${title} as incomplete` : `Mark ${title} as complete`}
         >
-          {completed ? <CheckCircle2 className="h-9 w-9 fill-[#256145] text-white" /> : <Circle className="h-9 w-9 text-[#d1c9bb]" />}
+          <Check className="h-4 w-4" strokeWidth={3} />
         </button>
-        <div>
-          <div className="text-base font-semibold text-[#1f2d24]">{title}</div>
-          <div className="mt-1 text-sm text-[#75827b]">{time}</div>
-        </div>
       </div>
-
-      <div className="text-sm leading-6 text-[#5a685f]">
-        <span className="font-semibold text-[#2b3930]">Intention:</span> {intention}
-      </div>
-
-      <div className="text-sm text-[#6a7770]">{quranConnections}</div>
-
-      <span className="flex items-center gap-1 justify-self-start rounded-full border border-[#e2dbcf] bg-[#faf7f2] px-4 py-2 text-sm font-medium text-[#4d5c54] md:justify-self-end">
-        View <ChevronRight className="h-4 w-4" />
-      </span>
-    </div>
+    </article>
   );
 }

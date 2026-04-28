@@ -53,11 +53,15 @@ export interface DashboardStat {
   label: string;
   description: string;
   icon: "check" | "star" | "book" | "flame";
+  progressPercent?: number;
+  trendLabel?: string;
+  footerLabel?: string;
 }
 
 export interface DashboardRoutine {
   id: string;
   title: string;
+  summary: string;
   time: string;
   intention: string;
   quranConnections: string;
@@ -73,14 +77,30 @@ export interface DashboardInsight {
   buttonLabel: string;
 }
 
+export interface DashboardReminder {
+  title: string;
+  body: string;
+}
+
+export interface DashboardQuickReflection {
+  title: string;
+  prompt: string;
+  buttonLabel: string;
+  latestEntry: string | null;
+}
+
 export interface RoutineDashboardPayload {
   greetingName: string;
+  profileName: string;
+  profileInitials: string;
   subtitle: string;
   dateLabel: string;
   hijriDateLabel: string;
   stats: DashboardStat[];
   tasks: DashboardRoutine[];
   insight: DashboardInsight;
+  reminder: DashboardReminder;
+  quickReflection: DashboardQuickReflection;
   storageMode: "mysql" | "file";
 }
 

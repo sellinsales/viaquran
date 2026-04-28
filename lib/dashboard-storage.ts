@@ -6,6 +6,8 @@ import { DEFAULT_ROUTINES, RoutineSeed } from "@/lib/routine-seeds";
 import { getDashboard, getStorageMode, readFileStore, withFileStoreMutation } from "@/lib/storage";
 import { THEMES } from "@/lib/theme-data";
 import {
+  DashboardQuickReflection,
+  DashboardReminder,
   DashboardRoutine,
   DashboardStat,
   RoutineCollectionPayload,
@@ -35,14 +37,23 @@ let routinesSchemaReady: Promise<void> | null = null;
 
 function formatDisplayDate() {
   return new Intl.DateTimeFormat("en", {
-    month: "short",
+    month: "long",
     day: "numeric",
     year: "numeric",
   }).format(new Date());
 }
 
-function getFallbackHijriDateLabel() {
-  return "19 Dhul Qa'dah 1446";
+function formatHijriDateLabel() {
+  try {
+    return new Intl.DateTimeFormat("en-u-ca-islamic", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    }).format(new Date());
+  } catch {
+    return "Islamic calendar unavailable";
+  }
 }
 
 function parseQuranConnectionCount(value: string) {
@@ -50,10 +61,38 @@ function parseQuranConnectionCount(value: string) {
   return Number.isFinite(count) ? count : 0;
 }
 
+function buildRoutineSummary(title: string, intention: string) {
+  const normalizedTitle = title.toLowerCase();
+
+  if (normalizedTitle.includes("work")) {
+    return "Earning halal income";
+  }
+
+  if (normalizedTitle.includes("study") || normalizedTitle.includes("learn")) {
+    return "Seeking knowledge";
+  }
+
+  if (normalizedTitle.includes("exercise") || normalizedTitle.includes("workout")) {
+    return "Taking care of my health";
+  }
+
+  if (normalizedTitle.includes("family")) {
+    return "Spending time with family";
+  }
+
+  if (normalizedTitle.includes("prayer") || normalizedTitle.includes("tahajjud")) {
+    return "Tahajjud";
+  }
+
+  const cleaned = intention.replace(/^to\s+/i, "").replace(/\.$/, "");
+  return cleaned ? `${cleaned.charAt(0).toUpperCase()}${cleaned.slice(1)}` : "Routine with intention";
+}
+
 function mapSeedToRoutine(seed: RoutineSeed, index: number): DashboardRoutine {
   return {
     id: `routine-${index + 1}`,
     title: seed.title,
+    summary: buildRoutineSummary(seed.title, seed.intention),
     time: seed.time,
     intention: seed.intention,
     quranConnections: `${seed.quranConnectionCount} Ayat`,
@@ -67,6 +106,7 @@ function mapRoutineRow(row: RoutineRow): DashboardRoutine {
   return {
     id: String(row.id),
     title: row.title,
+    summary: buildRoutineSummary(row.title, row.intention),
     time: row.time_of_day,
     intention: row.intention,
     quranConnections: `${row.quran_connection_count} Ayat`,
@@ -80,6 +120,7 @@ function mapStoredRoutine(record: Awaited<ReturnType<typeof readFileStore>>["rou
   return {
     id: record.id,
     title: record.title,
+    summary: buildRoutineSummary(record.title, record.intention),
     time: record.time,
     intention: record.intention,
     quranConnections: `${record.quranConnectionCount} Ayat`,
@@ -95,31 +136,42 @@ function buildStats(progress: Awaited<ReturnType<typeof getDashboard>>["progress
     (total, task) => total + parseQuranConnectionCount(task.quranConnections),
     0,
   );
+  const completionPercent = tasks.length > 0 ? Math.round((completedTasks / tasks.length) * 100) : 0;
+  const levelProgressPercent = Math.max(0, Math.min(100, 100 - progress.xpToNextLevel));
+  const quranConnectionTrend = Math.max(
+    10,
+    Math.min(99, Math.round((quranConnections / Math.max(tasks.length * 3, 1)) * 100)),
+  );
 
   return [
     {
       value: String(tasks.length),
       label: "Tasks Today",
-      description: `${completedTasks} completed so far`,
+      description: "Keep going!",
       icon: "check",
+      progressPercent: completionPercent,
+      footerLabel: `${completionPercent}%`,
     },
     {
       value: String(Math.max(1, Math.round(progress.totalXp / 10))),
       label: "Good Deeds",
-      description: "Track sincere action daily",
+      description: "This week",
       icon: "star",
+      trendLabel: `${levelProgressPercent}%`,
     },
     {
       value: String(quranConnections),
       label: "Quran Connections",
-      description: "Linked ayat across routines",
+      description: "This month",
       icon: "book",
+      trendLabel: `${quranConnectionTrend}%`,
     },
     {
       value: String(progress.currentStreak),
       label: "Day Streak",
-      description: "Stay consistent with reflection",
+      description: progress.currentStreak > 0 ? "MashaAllah!" : "Begin today",
       icon: "flame",
+      footerLabel: progress.currentStreak > 0 ? "Keep the habit alive" : "Start with one act",
     },
   ];
 }
@@ -133,6 +185,24 @@ async function buildInsight(tasks: DashboardRoutine[]) {
     translation: ayah.english,
     reference: ayah.reference,
     buttonLabel: "Read Full Verse",
+  };
+}
+
+function buildReminder(dashboard: Awaited<ReturnType<typeof getDashboard>>): DashboardReminder {
+  return {
+    title: "Today's Reminder",
+    body: dashboard.dailyGuidance.challengePrompt,
+  };
+}
+
+function buildQuickReflection(
+  dashboard: Awaited<ReturnType<typeof getDashboard>>,
+): DashboardQuickReflection {
+  return {
+    title: "Quick Reflection",
+    prompt: "How was your day?",
+    buttonLabel: "Write Reflection",
+    latestEntry: dashboard.recentEntries[0]?.input ?? null,
   };
 }
 
@@ -303,12 +373,16 @@ export async function getRoutineDashboard(userId: string): Promise<RoutineDashbo
 
   return {
     greetingName: "Ahmed",
+    profileName: "Ahmed",
+    profileInitials: "A",
     subtitle: "Turn your daily routine into acts of worship",
     dateLabel: formatDisplayDate(),
-    hijriDateLabel: getFallbackHijriDateLabel(),
+    hijriDateLabel: formatHijriDateLabel(),
     stats: buildStats(dashboard.progress, tasks),
     tasks,
     insight: await buildInsight(tasks),
+    reminder: buildReminder(dashboard),
+    quickReflection: buildQuickReflection(dashboard),
     storageMode,
   };
 }
