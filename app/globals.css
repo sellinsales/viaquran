@@ -5,9 +5,7 @@
 :root {
   color-scheme: light;
   --viaquran-bg: #f7f5f0;
-  --viaquran-ink: #17231c;
-  --viaquran-muted: #627168;
-  --viaquran-accent: #256145;
+  --viaquran-ink: #1d2b22;
 }
 
 * {
@@ -21,10 +19,8 @@ html {
 body {
   margin: 0;
   min-height: 100vh;
-  font-family: "Aptos", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
   color: var(--viaquran-ink);
-  background:
-    radial-gradient(circle at top, #ffffff 0%, #fbf8f2 36%, var(--viaquran-bg) 100%);
+  background: var(--viaquran-bg);
 }
 
 button,
@@ -42,32 +38,11 @@ a {
   font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
 }
 
-.deck-scroll {
-  scrollbar-width: none;
-}
-
-.deck-scroll::-webkit-scrollbar {
-  display: none;
-}
-
-.glass-panel {
-  background: rgba(255, 255, 255, 0.76);
-  backdrop-filter: blur(16px);
-}
-
 .ayah-arabic {
   font-size: 1.6rem;
   line-height: 2.6rem;
   direction: rtl;
   font-family: "Noto Naskh Arabic", "Amiri", serif;
-}
-
-.viaquran-arch-frame {
-  clip-path: inset(0 round 240px 240px 34px 34px);
-}
-
-.viaquran-arch-inner {
-  clip-path: inset(0 round 220px 220px 28px 28px);
 }
 
 @media (min-width: 768px) {
