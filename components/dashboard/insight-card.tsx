@@ -1,3 +1,5 @@
+import { ArrowRight } from "lucide-react";
+
 export function InsightCard({
   arabic,
   translation,
@@ -31,9 +33,10 @@ export function InsightCard({
 
       <button
         type="button"
-        className="mt-6 w-full rounded-2xl bg-[#256145] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#1f5139]"
+        className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[#256145] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#1f5139]"
       >
         {buttonLabel}
+        <ArrowRight className="h-4 w-4" />
       </button>
     </section>
   );

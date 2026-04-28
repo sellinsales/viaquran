@@ -9,6 +9,7 @@ import {
   ProgressSummary,
   ReflectionEntry,
   SavedReflection,
+  RoutineFrequency,
   ThemeId,
 } from "@/lib/types";
 
@@ -95,11 +96,25 @@ interface FileCommunityPostRecord {
   createdAt: string;
 }
 
-interface FileStore {
+export interface FileRoutineRecord {
+  id: string;
+  userId: string;
+  title: string;
+  time: string;
+  intention: string;
+  quranConnectionCount: number;
+  completed: boolean;
+  themeId: ThemeId;
+  frequency: RoutineFrequency;
+  createdAt: string;
+}
+
+export interface FileStore {
   users: Record<string, FileUserRecord>;
   reflections: FileReflectionRecord[];
   savedItems: FileSavedReflectionRecord[];
   communityPosts: FileCommunityPostRecord[];
+  routines: FileRoutineRecord[];
 }
 
 function hasDbConfig() {
@@ -224,6 +239,7 @@ function emptyStore(): FileStore {
     reflections: [],
     savedItems: [],
     communityPosts: [],
+    routines: [],
   };
 }
 
@@ -234,6 +250,7 @@ function normalizeStore(data: unknown): FileStore {
     reflections: Array.isArray(record.reflections) ? record.reflections : [],
     savedItems: Array.isArray(record.savedItems) ? record.savedItems : [],
     communityPosts: Array.isArray(record.communityPosts) ? record.communityPosts : [],
+    routines: Array.isArray(record.routines) ? record.routines : [],
   };
 }
 
@@ -247,7 +264,7 @@ async function ensureFileStore() {
   }
 }
 
-async function readFileStore() {
+export async function readFileStore() {
   await ensureFileStore();
   const raw = await fs.readFile(STORE_FILE_PATH, "utf8");
   return normalizeStore(JSON.parse(raw));
@@ -257,7 +274,7 @@ async function writeFileStore(store: FileStore) {
   await fs.writeFile(STORE_FILE_PATH, JSON.stringify(store, null, 2), "utf8");
 }
 
-async function withFileStoreMutation<T>(action: (store: FileStore) => Promise<T>) {
+export async function withFileStoreMutation<T>(action: (store: FileStore) => Promise<T>) {
   const nextTask = fileStoreQueue.then(async () => {
     const store = await readFileStore();
     const result = await action(store);

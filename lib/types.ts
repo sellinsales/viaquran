@@ -46,6 +46,49 @@ export interface QuranChapterPayload {
   cachedAt: string | null;
 }
 
+export type RoutineFrequency = "daily" | "weekly" | "monthly";
+
+export interface DashboardStat {
+  value: string;
+  label: string;
+  description: string;
+  icon: "check" | "star" | "book" | "flame";
+}
+
+export interface DashboardRoutine {
+  id: string;
+  title: string;
+  time: string;
+  intention: string;
+  quranConnections: string;
+  completed: boolean;
+  themeId: ThemeId;
+  frequency: RoutineFrequency;
+}
+
+export interface DashboardInsight {
+  arabic: string;
+  translation: string;
+  reference: string;
+  buttonLabel: string;
+}
+
+export interface RoutineDashboardPayload {
+  greetingName: string;
+  subtitle: string;
+  dateLabel: string;
+  hijriDateLabel: string;
+  stats: DashboardStat[];
+  tasks: DashboardRoutine[];
+  insight: DashboardInsight;
+  storageMode: "mysql" | "file";
+}
+
+export interface RoutineCollectionPayload {
+  tasks: DashboardRoutine[];
+  storageMode: "mysql" | "file";
+}
+
 export interface ThemeDefinition {
   id: ThemeId;
   label: string;

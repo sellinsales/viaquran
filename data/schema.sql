@@ -56,6 +56,24 @@ CREATE TABLE IF NOT EXISTS community_posts (
   INDEX idx_community_posts_created (created_at DESC)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS routines (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  user_id BIGINT UNSIGNED NOT NULL,
+  title VARCHAR(191) NOT NULL,
+  time_of_day VARCHAR(32) NOT NULL,
+  intention TEXT NOT NULL,
+  quran_connection_count SMALLINT UNSIGNED NOT NULL DEFAULT 1,
+  is_completed TINYINT(1) NOT NULL DEFAULT 0,
+  theme_id VARCHAR(32) NOT NULL,
+  frequency VARCHAR(16) NOT NULL DEFAULT 'daily',
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_routines_user
+    FOREIGN KEY (user_id) REFERENCES app_users(id)
+    ON DELETE CASCADE,
+  INDEX idx_routines_user_created (user_id, created_at DESC)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS quran_chapters (
   chapter_id SMALLINT UNSIGNED NOT NULL PRIMARY KEY,
   name_simple VARCHAR(191) NOT NULL,
